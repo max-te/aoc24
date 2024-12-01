@@ -1,0 +1,10 @@
+[package]
+name = "aoc24"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+lib_aoc = "0.8.0"
+logos = "0.14.2"
+pest = { version = "2.7.14", features = ["miette-error"] }
+pest_derive = "2.7.14"
