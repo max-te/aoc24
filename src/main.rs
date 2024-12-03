@@ -17,5 +17,5 @@ impl Solver for Solutions {
 }
 
 fn main() {
-    solve_through!(Solutions, 1);
+    solve_through!(Solutions, 2);
 }
