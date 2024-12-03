@@ -10,12 +10,17 @@ impl Solver for Solutions {
             .expect("Puzzle input could not be read.")
     }
 
-    fn load_test(day: u8, _part: bool) -> String {
+    fn load_test(day: u8, part: bool) -> String {
+        if part {
+            if let Ok(puzzle) = std::fs::read_to_string(format!("src/inputs/test_{day:02}_2.txt")) {
+                return puzzle;
+            }
+        }
         std::fs::read_to_string(format!("src/inputs/test_{day:02}.txt"))
             .expect("Puzzle input could not be read.")
     }
 }
 
 fn main() {
-    solve_through!(Solutions, 2);
+    solve_through!(Solutions, 3);
 }
