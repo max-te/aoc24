@@ -4,6 +4,7 @@ struct Solutions {}
 mod day01;
 mod day02;
 mod day03;
+mod day04;
 mod util;
 
 impl Solver for Solutions {
@@ -24,5 +25,5 @@ impl Solver for Solutions {
 }
 
 fn main() {
-    solve_through!(Solutions, 3);
+    solve_through!(Solutions, 4);
 }
