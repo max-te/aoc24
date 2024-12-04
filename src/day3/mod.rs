@@ -1,5 +1,4 @@
-use crate::Solutions;
-use lib_aoc::prelude::*;
+use aoc_runner_derive::{aoc, aoc_generator};
 
 #[derive(Clone, Debug)]
 enum ReaderState {
@@ -88,35 +87,50 @@ impl MultiplicationReader {
     }
 }
 
-impl Solution<DAY_03> for Solutions {
-    type Input<'i> = Vec<(bool, u64, u64)>;
-    type Output = u64;
+type Input = Vec<(bool, u64, u64)>;
+type Output = u64;
 
-    fn parse(puzzle: &str) -> Self::Input<'_> {
-        let mut reader = MultiplicationReader::new();
-        puzzle.chars().for_each(|c| reader.read(c));
-        reader.pairs
-    }
-
-    fn part_one(input: &Self::Input<'_>) -> Self::Output {
-        input.iter().map(|(_, a, b)| a * b).sum()
-    }
-
-    fn part_two(input: &Self::Input<'_>) -> Self::Output {
-        input
-            .iter()
-            .map(|(doing, a, b)| if *doing { a * b } else { 0 })
-            .sum()
-    }
+#[aoc_generator(day3)]
+fn parse(puzzle: &str) -> Input {
+    let mut reader = MultiplicationReader::new();
+    puzzle.chars().for_each(|c| reader.read(c));
+    reader.pairs
 }
 
-impl Test<DAY_03> for Solutions {
-    fn expected(part: bool) -> Self::Output {
-        match part {
-            PART_ONE => 161,
-            PART_TWO => 48,
-        }
-    }
+#[aoc(day3, part1)]
+fn part_one(input: &Input) -> Output {
+    input.iter().map(|(_, a, b)| a * b).sum()
 }
 
-derive_tests!(Solutions, DAY_03);
+pub fn part1(puzzle: &str) -> Output {
+    part_one(&parse(puzzle))
+}
+
+#[aoc(day3, part2)]
+fn part_two(input: &Input) -> Output {
+    input
+        .iter()
+        .map(|(doing, a, b)| if *doing { a * b } else { 0 })
+        .sum()
+}
+
+pub fn part2(puzzle: &str) -> Output {
+    part_two(&parse(puzzle))
+}
+
+#[cfg(test)]
+mod examples {
+    use super::*;
+
+    #[test]
+    fn example1() {
+        let res = part1(include_str!("test.txt"));
+        assert_eq!(res, 161);
+    }
+
+    #[test]
+    fn example2() {
+        let res = part2(include_str!("test_2.txt"));
+        assert_eq!(res, 48);
+    }
+}

@@ -1,11 +1,20 @@
 [package]
 name = "aoc24"
-version = "0.1.0"
+version = "24.4.1"
 edition = "2021"
 
+[[bin]]
+name = "aoc24"
+path = "src/main.rs"
+
+[lib]
+name = "aoc24"
+path = "src/lib.rs"
+
 [dependencies]
+aoc-runner = "0.3.0"
+aoc-runner-derive = "0.3.0"
 itertools = "0.13.0"
-lib_aoc = "0.8.0"
-logos = "0.14.2"
-pest = { version = "2.7.14", features = ["miette-error"] }
-pest_derive = "2.7.14"
+# logos = "0.14.2"
+# pest = { version = "2.7.14", features = ["miette-error"] }
+# pest_derive = "2.7.14"

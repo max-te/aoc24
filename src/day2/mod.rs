@@ -1,5 +1,4 @@
-use crate::Solutions;
-use lib_aoc::prelude::*;
+use aoc_runner_derive::{aoc, aoc_generator};
 
 pub struct VecVec<T> {
     lengths: Vec<usize>,
@@ -51,28 +50,37 @@ impl<'this> Iterator for VecVecIter<'this> {
     }
 }
 
-impl Solution<DAY_02> for Solutions {
-    type Input<'i> = VecVec<u64>;
-    type Output = u64;
+type Input = VecVec<u64>;
+type Output = u64;
 
-    fn parse(puzzle: &str) -> Self::Input<'_> {
-        let mut input = VecVec::with_capacity(puzzle.len() / 16);
-        for line in puzzle.lines() {
-            input.push_from(line.split(' ').map(str::parse::<u64>).map(Result::unwrap));
-        }
-        input
+#[aoc_generator(day2)]
+fn parse(puzzle: &str) -> Input {
+    let mut input = VecVec::with_capacity(puzzle.len() / 16);
+    for line in puzzle.lines() {
+        input.push_from(line.split(' ').map(str::parse::<u64>).map(Result::unwrap));
     }
+    input
+}
 
-    fn part_one(input: &Self::Input<'_>) -> Self::Output {
-        input.iter().filter(|seq| sequence_is_safe(seq)).count() as u64
-    }
+#[aoc(day2, part1)]
+fn part_one(input: &Input) -> Output {
+    input.iter().filter(|seq| sequence_is_safe(seq)).count() as u64
+}
 
-    fn part_two(input: &Self::Input<'_>) -> Self::Output {
-        input
-            .iter()
-            .filter(|seq| sequence_is_safe(seq) || problem_dampable(seq))
-            .count() as u64
-    }
+pub fn part1(puzzle: &str) -> Output {
+    part_one(&parse(puzzle))
+}
+
+#[aoc(day2, part2)]
+fn part_two(input: &Input) -> Output {
+    input
+        .iter()
+        .filter(|seq| sequence_is_safe(seq) || problem_dampable(seq))
+        .count() as u64
+}
+
+pub fn part2(puzzle: &str) -> Output {
+    part_two(&parse(puzzle))
 }
 
 fn sequence_is_safe(seq: &[u64]) -> bool {
@@ -107,13 +115,19 @@ fn problem_dampable(seq: &[u64]) -> bool {
     false
 }
 
-impl Test<DAY_02> for Solutions {
-    fn expected(part: bool) -> Self::Output {
-        match part {
-            PART_ONE => 2,
-            PART_TWO => 4,
-        }
+#[cfg(test)]
+mod examples {
+    use super::*;
+
+    #[test]
+    fn example1() {
+        let res = part1(include_str!("test.txt"));
+        assert_eq!(res, 2);
+    }
+
+    #[test]
+    fn example2() {
+        let res = part2(include_str!("test.txt"));
+        assert_eq!(res, 4);
     }
 }
-
-derive_tests!(Solutions, DAY_02);
