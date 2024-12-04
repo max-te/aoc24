@@ -1,7 +1,6 @@
 use crate::Solutions;
 use lib_aoc::prelude::*;
 
-
 #[derive(Clone, Debug)]
 enum ReaderState {
     Init,
@@ -42,25 +41,37 @@ impl MultiplicationReader {
             (ReaderState::ReadM, 'u') => self.state = ReaderState::ReadMU,
             (ReaderState::ReadMU, 'l') => self.state = ReaderState::ReadMUL,
             (ReaderState::ReadMUL, '(') => self.state = ReaderState::FirstDigit(String::new()),
-            (ReaderState::FirstDigit(first), ',') => self.state = ReaderState::SecondDigit(first.parse().unwrap(), String::new()),
+            (ReaderState::FirstDigit(first), ',') => {
+                self.state = ReaderState::SecondDigit(first.parse().unwrap(), String::new())
+            }
             (ReaderState::FirstDigit(ref mut first), '0'..='9') => first.push(char),
             (ReaderState::SecondDigit(_, ref mut second), '0'..='9') => second.push(char),
-            (ReaderState::SecondDigit(first, second), ')') => { self.pairs.push((self.doing, *first, second.parse().unwrap())); self.state = ReaderState::Init; },
+            (ReaderState::SecondDigit(first, second), ')') => {
+                self.pairs
+                    .push((self.doing, *first, second.parse().unwrap()));
+                self.state = ReaderState::Init;
+            }
             (ReaderState::Init, 'd') => self.state = ReaderState::ReadD,
             (ReaderState::ReadD, 'o') => self.state = ReaderState::ReadDO,
             (ReaderState::ReadDO, '(') => self.state = ReaderState::ReadDOLparen,
-            (ReaderState::ReadDOLparen, ')') => {self.doing = true; self.state = ReaderState::Init; },
+            (ReaderState::ReadDOLparen, ')') => {
+                self.doing = true;
+                self.state = ReaderState::Init;
+            }
             (ReaderState::ReadDO, 'n') => self.state = ReaderState::ReadDON,
             (ReaderState::ReadDON, '\'') => self.state = ReaderState::ReadDONApo,
             (ReaderState::ReadDONApo, 't') => self.state = ReaderState::ReadDONT,
             (ReaderState::ReadDONT, '(') => self.state = ReaderState::ReadDONTLparen,
-            (ReaderState::ReadDONTLparen, ')') => {self.doing = false; self.state = ReaderState::Init; },
-            _ => { self.state = ReaderState::Init; },
+            (ReaderState::ReadDONTLparen, ')') => {
+                self.doing = false;
+                self.state = ReaderState::Init;
+            }
+            _ => {
+                self.state = ReaderState::Init;
+            }
         };
     }
 }
-
-
 
 impl Solution<DAY_03> for Solutions {
     type Input<'i> = Vec<(bool, u64, u64)>;
@@ -77,7 +88,10 @@ impl Solution<DAY_03> for Solutions {
     }
 
     fn part_two(input: &Self::Input<'_>) -> Self::Output {
-        input.iter().map(|(doing, a, b)| if *doing { a * b } else {0}).sum()
+        input
+            .iter()
+            .map(|(doing, a, b)| if *doing { a * b } else { 0 })
+            .sum()
     }
 }
 

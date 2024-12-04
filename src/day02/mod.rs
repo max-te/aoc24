@@ -13,7 +13,7 @@ impl VecVec<u64> {
             data: Vec::with_capacity(capacity),
         }
     }
-    
+
     fn push_from<I: Iterator<Item = u64>>(&mut self, values: I) {
         let previous_data_length = self.data.len();
         self.data.extend(values);
@@ -51,7 +51,6 @@ impl<'this> Iterator for VecVecIter<'this> {
     }
 }
 
-
 impl Solution<DAY_02> for Solutions {
     type Input<'i> = VecVec<u64>;
     type Output = u64;
@@ -69,8 +68,9 @@ impl Solution<DAY_02> for Solutions {
     }
 
     fn part_two(input: &Self::Input<'_>) -> Self::Output {
-        input.iter()
-            .filter(|seq| sequence_is_safe(seq) || problem_dampable(&seq.to_vec()))
+        input
+            .iter()
+            .filter(|seq| sequence_is_safe(seq) || problem_dampable(seq))
             .count() as u64
     }
 }
@@ -85,7 +85,7 @@ fn sequence_is_safe(seq: &[u64]) -> bool {
             return false;
         }
         let step = i.abs_diff(*prev);
-        if step < 1 || step > 3 {
+        if !(1..=3).contains(&step) {
             // eprintln!("{seq:?} has a step of {step} at {prev}, {i}");
             return false;
         }
@@ -95,9 +95,9 @@ fn sequence_is_safe(seq: &[u64]) -> bool {
     true
 }
 
-fn problem_dampable(seq: &Vec<u64>) -> bool {
+fn problem_dampable(seq: &[u64]) -> bool {
     for i in 0..seq.len() {
-        let mut dampened = seq.clone();
+        let mut dampened = seq.to_vec();
         dampened.remove(i);
         if sequence_is_safe(&dampened) {
             // eprintln!("{seq:?} is dampable at {i}");
@@ -106,7 +106,6 @@ fn problem_dampable(seq: &Vec<u64>) -> bool {
     }
     false
 }
-
 
 impl Test<DAY_02> for Solutions {
     fn expected(part: bool) -> Self::Output {

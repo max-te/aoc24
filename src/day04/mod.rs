@@ -17,15 +17,15 @@ impl Solution<DAY_04> for Solutions {
         let mut diag_l_machines = Vec::new();
 
         let mut iter = input.iter();
-        while let Some(ch) = iter.next() {
+        for ch in iter.by_ref() {
             h_machine.consume(*ch);
-            
+
             let mut new_machine = XmasCountMachine::new();
             new_machine.consume(*ch);
 
             v_machines.push(new_machine.clone());
             diag_r_machines.push(new_machine.clone());
-            diag_l_machines.push(new_machine.clone());
+            diag_l_machines.push(new_machine);
 
             if *ch == b'\n' {
                 break;
@@ -48,33 +48,37 @@ impl Solution<DAY_04> for Solutions {
 
             if *ch == b'\n' {
                 diag_l_index = (diag_l_index + 2) % diag_l_machines.len();
-                diag_r_index = diag_r_index;
+                // diag_r_index = diag_r_index;
             } else {
                 diag_l_index = (diag_l_index + 1) % diag_l_machines.len();
                 diag_r_index = (diag_r_index + 1) % diag_r_machines.len();
             }
         }
         // dbg!(&h_machine, &v_machines, &diag_l_machines, &diag_r_machines);
-        h_machine.count + v_machines.iter().map(|m| m.count).sum::<usize>() + diag_l_machines.iter().map(|m| m.count).sum::<usize>() + diag_r_machines.iter().map(|m| m.count).sum::<usize>()
+        h_machine.count
+            + v_machines.iter().map(|m| m.count).sum::<usize>()
+            + diag_l_machines.iter().map(|m| m.count).sum::<usize>()
+            + diag_r_machines.iter().map(|m| m.count).sum::<usize>()
     }
 
     fn part_two(input: &Self::Input<'_>) -> Self::Output {
         let mut count = 0;
         let lines = input.split(|x| *x == b'\n');
         for (before, middle, after) in lines.tuple_windows() {
-            if after.len() == 0 {
+            if after.is_empty() {
                 continue;
             }
             for center in 1usize..(middle.len() - 1) {
-                if middle[center] == b'A' {
-                    if before[center - 1] == b'S' && after[center + 1] == b'M' || before[center - 1] == b'M' && after[center + 1] == b'S' {
-                        if before[center + 1] == b'S' && after[center - 1] == b'M' || before[center + 1] == b'M' && after[center - 1] == b'S' {
-                            count += 1;
-                        }
-                    }
+                if (middle[center] == b'A')
+                    && (before[center - 1] == b'S' && after[center + 1] == b'M'
+                        || before[center - 1] == b'M' && after[center + 1] == b'S')
+                    && (before[center + 1] == b'S' && after[center - 1] == b'M'
+                        || before[center + 1] == b'M' && after[center - 1] == b'S')
+                {
+                    count += 1;
                 }
             }
-        };  
+        }
         count
     }
 }
@@ -105,9 +109,15 @@ impl XmasCountMachine {
     }
 
     fn consume(&mut self, ch: u8) {
-        self.read_state = match(self.read_state, ch) {
-            (XmasReadState::ReadSAM, b'X') => { self.count += 1; XmasReadState::ReadX },
-            (XmasReadState::ReadXMA, b'S') => { self.count += 1; XmasReadState::ReadS },
+        self.read_state = match (self.read_state, ch) {
+            (XmasReadState::ReadSAM, b'X') => {
+                self.count += 1;
+                XmasReadState::ReadX
+            }
+            (XmasReadState::ReadXMA, b'S') => {
+                self.count += 1;
+                XmasReadState::ReadS
+            }
             (_, b'X') => XmasReadState::ReadX,
             (XmasReadState::ReadX, b'M') => XmasReadState::ReadXM,
             (XmasReadState::ReadXM, b'A') => XmasReadState::ReadXMA,
@@ -118,7 +128,6 @@ impl XmasCountMachine {
         };
     }
 }
-
 
 impl Test<DAY_04> for Solutions {
     fn expected(part: bool) -> Self::Output {
@@ -144,7 +153,7 @@ mod unit_tests {
         }
         counter.count
     }
-    
+
     #[test]
     fn counts_xmasses() {
         let input = b"XMASSXXMAS XMMASSS\nXMAS";
