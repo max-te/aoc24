@@ -27,6 +27,11 @@ jobs:
 
       - name: Drop main.rs
         run: rm src/main.rs
+        
+      - name: Build
+        run: cargo build --verbose --lib
+      - name: Run tests
+        run: cargo test --verbose --lib
 
       - name: Build the benchmark target(s)
         run: cargo codspeed build codspeed
