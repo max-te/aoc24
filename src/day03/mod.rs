@@ -35,17 +35,32 @@ impl MultiplicationReader {
         }
     }
 
-    fn read(&mut self, char: char) {
-        match (&mut self.state, char) {
+    fn read(&mut self, ch: char) {
+        match (&mut self.state, ch) {
             (ReaderState::Init, 'm') => self.state = ReaderState::ReadM,
             (ReaderState::ReadM, 'u') => self.state = ReaderState::ReadMU,
             (ReaderState::ReadMU, 'l') => self.state = ReaderState::ReadMUL,
-            (ReaderState::ReadMUL, '(') => self.state = ReaderState::FirstDigit(String::new()),
-            (ReaderState::FirstDigit(first), ',') => {
-                self.state = ReaderState::SecondDigit(first.parse().unwrap(), String::new())
+            (ReaderState::ReadMUL, '(') => {
+                self.state = ReaderState::FirstDigit(String::with_capacity(3))
             }
-            (ReaderState::FirstDigit(ref mut first), '0'..='9') => first.push(char),
-            (ReaderState::SecondDigit(_, ref mut second), '0'..='9') => second.push(char),
+            (ReaderState::FirstDigit(first), ',') => {
+                self.state =
+                    ReaderState::SecondDigit(first.parse().unwrap(), String::with_capacity(3))
+            }
+            (ReaderState::FirstDigit(ref mut first), '0'..='9') => {
+                if first.len() < 3 {
+                    first.push(ch)
+                } else {
+                    self.state = ReaderState::Init
+                }
+            }
+            (ReaderState::SecondDigit(_, ref mut second), '0'..='9') => {
+                if second.len() < 3 {
+                    second.push(ch)
+                } else {
+                    self.state = ReaderState::Init
+                }
+            }
             (ReaderState::SecondDigit(first, second), ')') => {
                 self.pairs
                     .push((self.doing, *first, second.parse().unwrap()));
