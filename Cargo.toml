@@ -3,10 +3,6 @@ name = "aoc24"
 version = "24.4.1"
 edition = "2021"
 
-[[bin]]
-name = "aoc24-eval"
-path = "src/main.rs"
-
 [lib]
 name = "aoc24"
 path = "src/lib.rs"
