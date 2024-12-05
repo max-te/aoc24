@@ -11,30 +11,26 @@ type Input = (HashSet<(PageNum, PageNum)>, VecVec<PageNum>);
 #[aoc_generator(day5)]
 fn parse(puzzle: &str) -> Input {
     let puzzle = puzzle.as_bytes();
-    let mut lines = puzzle.split(|x| *x == b'\n');
     let mut rules = HashSet::new();
-    let mut pos = 0;
-    for line in &mut lines {
-        pos += line.len() + 1;
-        if line.is_empty() {
-            break;
-        }
+    let mut cursor = 0;
+    while puzzle[cursor] != b'\n' {
+        let line = &puzzle[cursor..];
         let (left, right) = (&line[0..=1], &line[3..=4]);
         rules.insert((
             parse_2_digits(left),
             parse_2_digits(right),
         ));
+        cursor += 6;
     }
 
-    let pages_estimate = 1 + (puzzle.len() - pos) / 3;
+    let pages_estimate = 1+ (puzzle.len() - cursor) / 3;
     let mut updates = VecVec::with_capacity(pages_estimate);
-    for line in lines {
+    for line in puzzle[cursor + 1..].split(|x| *x == b'\n') {
         if line.is_empty() {
             break;
         }
-        let pages = line
-            .split(|x| *x == b',')
-            .map(parse_2_digits);
+        let pages = line.chunks(3)
+            .map(|c| parse_2_digits(&c[..2]));
         updates.push_from(pages);
     }
     (rules, updates)
