@@ -2,10 +2,10 @@ use aoc_runner_derive::{aoc, aoc_generator};
 use std::cmp::Ordering;
 use std::collections::HashSet;
 
-use crate::util::VecVec;
+use crate::util::{parse_2_digits, VecVec};
 
 type Output = u32;
-type PageNum = u32;
+type PageNum = u8;
 type Input = (HashSet<(PageNum, PageNum)>, VecVec<PageNum>);
 
 #[aoc_generator(day5)]
@@ -20,8 +20,8 @@ fn parse(puzzle: &str) -> Input {
         }
         let (left, right) = line.split_once('|').unwrap();
         rules.insert((
-            left.parse::<PageNum>().unwrap(),
-            right.parse::<PageNum>().unwrap(),
+            parse_2_digits(left.as_bytes()),
+            parse_2_digits(right.as_bytes()),
         ));
     }
 
@@ -33,8 +33,8 @@ fn parse(puzzle: &str) -> Input {
         }
         let pages = line
             .split(',')
-            .map(str::parse::<PageNum>)
-            .map(Result::unwrap);
+            .map(str::as_bytes)
+            .map(parse_2_digits);
         updates.push_from(pages);
     }
     (rules, updates)
@@ -65,7 +65,7 @@ fn is_legal(update: &[PageNum], rules: &HashSet<(PageNum, PageNum)>) -> bool {
 #[inline]
 fn middle_page_num(update: &[PageNum]) -> Output {
     debug_assert!(update.len() % 2 == 1);
-    update[(update.len()) / 2]
+    update[(update.len()) / 2] as Output
 }
 
 pub fn part1(puzzle: &str) -> Output {
