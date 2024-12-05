@@ -1,4 +1,3 @@
-
 pub struct VecVec<T> {
     lengths: Vec<usize>,
     data: Vec<T>,
@@ -51,7 +50,7 @@ impl<'this, T> Iterator for VecVecIter<'this, T> {
 
 #[inline]
 pub fn parse_2_digits(digits: &[u8]) -> u8 {
-  debug_assert!(digits.len() == 2);
-  debug_assert!(digits[0].is_ascii_digit() && digits[1].is_ascii_digit());
-  (digits[0] - '0' as u8) * 10 + digits[1] - '0' as u8
+    debug_assert!(digits.len() == 2);
+    debug_assert!(digits[0].is_ascii_digit() && digits[1].is_ascii_digit());
+    (digits[0] - '0' as u8) * 10 + digits[1] - '0' as u8
 }

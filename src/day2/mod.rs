@@ -1,5 +1,5 @@
-use aoc_runner_derive::{aoc, aoc_generator};
 use crate::util::VecVec;
+use aoc_runner_derive::{aoc, aoc_generator};
 
 type Input = VecVec<u64>;
 type Output = u64;
