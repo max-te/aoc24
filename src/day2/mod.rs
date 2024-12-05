@@ -1,54 +1,5 @@
 use aoc_runner_derive::{aoc, aoc_generator};
-
-pub struct VecVec<T> {
-    lengths: Vec<usize>,
-    data: Vec<T>,
-}
-
-impl VecVec<u64> {
-    fn with_capacity(capacity: usize) -> Self {
-        Self {
-            lengths: Vec::with_capacity(capacity),
-            data: Vec::with_capacity(capacity),
-        }
-    }
-
-    fn push_from<I: Iterator<Item = u64>>(&mut self, values: I) {
-        let previous_data_length = self.data.len();
-        self.data.extend(values);
-        self.lengths.push(self.data.len() - previous_data_length);
-    }
-
-    fn iter(&self) -> VecVecIter {
-        VecVecIter {
-            data: self,
-            lengths_index: 0,
-            data_index: 0,
-        }
-    }
-}
-
-struct VecVecIter<'this> {
-    data: &'this VecVec<u64>,
-    lengths_index: usize,
-    data_index: usize,
-}
-
-impl<'this> Iterator for VecVecIter<'this> {
-    type Item = &'this [u64];
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.lengths_index < self.data.lengths.len() {
-            let length = self.data.lengths[self.lengths_index];
-            self.lengths_index += 1;
-            let start = self.data_index;
-            self.data_index += length;
-            Some(&self.data.data[start..self.data_index])
-        } else {
-            None
-        }
-    }
-}
+use crate::util::VecVec;
 
 type Input = VecVec<u64>;
 type Output = u64;

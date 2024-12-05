@@ -2,15 +2,19 @@ use aoc_runner_derive::{aoc, aoc_generator};
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 
+use crate::util::VecVec;
+
 type Output = u32;
 type PageNum = u32;
-type Input = (BTreeSet<(PageNum, PageNum)>, Vec<Vec<PageNum>>);
+type Input = (BTreeSet<(PageNum, PageNum)>, VecVec<PageNum>);
 
 #[aoc_generator(day5)]
 fn parse(puzzle: &str) -> Input {
     let mut lines = puzzle.lines();
     let mut rules = BTreeSet::new();
+    let mut pos = 0;
     for line in &mut lines {
+        pos += line.len() + 1;
         if line.is_empty() {
             break;
         }
@@ -20,7 +24,9 @@ fn parse(puzzle: &str) -> Input {
             right.parse::<PageNum>().unwrap(),
         ));
     }
-    let mut updates = Vec::new();
+
+    let pages_estimate = 1 + (puzzle.len() - pos) / 3;
+    let mut updates = VecVec::with_capacity(pages_estimate);
     for line in lines {
         if line.is_empty() {
             break;
@@ -28,9 +34,8 @@ fn parse(puzzle: &str) -> Input {
         let pages = line
             .split(',')
             .map(str::parse::<PageNum>)
-            .map(Result::unwrap)
-            .collect::<Vec<_>>();
-        updates.push(pages);
+            .map(Result::unwrap);
+        updates.push_from(pages);
     }
     (rules, updates)
 }
@@ -74,7 +79,7 @@ fn part_two((rules, updates): &Input) -> Output {
         .iter()
         .filter(|update| !is_legal(update, &rules))
         .map(|update| {
-            let mut update = update.clone();
+            let mut update = update.to_vec();
             update.sort_by(|a, b| {
                 if rules.contains(&(*a, *b)) {
                     Ordering::Less
