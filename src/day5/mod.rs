@@ -1,19 +1,17 @@
 use aoc_runner_derive::{aoc, aoc_generator};
-use std::hash::BuildHasher;
-use std::{cmp::Ordering, hash::BuildHasherDefault};
+use std::cmp::Ordering;
 use std::collections::HashSet;
 
-use crate::nohash::TailHasher;
-use crate::{nohash::BuildTailHasher, util::{parse_2_digits, VecVec}};
+use crate::util::{parse_2_digits, VecVec};
 
 type Output = u32;
 type PageNum = u8;
-type Input = (HashSet<(PageNum, PageNum), BuildHasherDefault<TailHasher<u8>>>, VecVec<PageNum>);
+type Input = (HashSet<(PageNum, PageNum)>, VecVec<PageNum>);
 
 #[aoc_generator(day5)]
 fn parse(puzzle: &str) -> Input {
     let puzzle = puzzle.as_bytes();
-    let mut rules = HashSet::with_capacity_and_hasher(100, BuildTailHasher::<u8>::default());
+    let mut rules = HashSet::new();
     let mut cursor = 0;
     while puzzle[cursor] != b'\n' {
         let line = &puzzle[cursor..];
@@ -47,7 +45,7 @@ fn part_one((rules, updates): &Input) -> Output {
         .sum()
 }
 
-fn is_legal(update: &[PageNum], rules: &HashSet<(PageNum, PageNum), impl BuildHasher>) -> bool {
+fn is_legal(update: &[PageNum], rules: &HashSet<(PageNum, PageNum)>) -> bool {
     for i in 0..update.len() - 1 {
         let page = update[i];
         // Assumption (info from part 2): rules specify a total or cyclic order, so we just need to check the next one
