@@ -17,8 +17,7 @@ type Input = (Vec<PageNum>, VecVec<PageNum>);
 #[aoc_generator(day5)]
 fn parse(puzzle: &str) -> Input {
     let mut lines = puzzle.lines();
-    let mut rule_counts: HashMap<PageNum, i8, BuildNoHashHasher<PageNum>> =
-        HashMap::with_capacity_and_hasher(100, BuildNoHashHasher::default());
+    let mut rule_counts: HashMap::<PageNum, i8, BuildNoHashHasher<PageNum>> = HashMap::with_capacity_and_hasher(100, BuildNoHashHasher::default());
     let mut pos = 0;
     for line in &mut lines {
         pos += line.len() + 1;
@@ -32,11 +31,7 @@ fn parse(puzzle: &str) -> Input {
         *rule_counts.entry(left).or_insert(0) += 1;
     }
 
-    let pages_in_order: Vec<PageNum> = rule_counts
-        .keys()
-        .copied()
-        .sorted_unstable_by_key(|&page| -rule_counts[&page])
-        .collect();
+    let pages_in_order: Vec<PageNum> = rule_counts.keys().copied().sorted_unstable_by_key(|&page| -rule_counts[&page]).collect();
 
     let pages_estimate = 1 + (puzzle.len() - pos) / 3;
     let mut updates = VecVec::with_capacity(pages_estimate);
@@ -44,7 +39,10 @@ fn parse(puzzle: &str) -> Input {
         if line.is_empty() {
             break;
         }
-        let pages = line.split(',').map(str::as_bytes).map(parse_2_digits);
+        let pages = line
+            .split(',')
+            .map(str::as_bytes)
+            .map(parse_2_digits);
         updates.push_from(pages);
     }
     (pages_in_order, updates)
@@ -89,11 +87,7 @@ fn part_two((page_order, updates): &Input) -> Output {
         .iter()
         .filter(|update| !is_legal(update, &page_order))
         .map(|update| {
-            page_order
-                .iter()
-                .filter(|&p| update.contains(p))
-                .map(|&p| p)
-                .collect_vec()
+            page_order.iter().filter(|&p| update.contains(p)).map(|&p| p).collect_vec()
         })
         .map(|update| middle_page_num(&update))
         .sum()
