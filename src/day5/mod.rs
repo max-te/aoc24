@@ -1,17 +1,22 @@
 use aoc_runner_derive::{aoc, aoc_generator};
-use std::cmp::Ordering;
-use std::collections::BTreeSet;
+use itertools::Itertools;
+use std::collections::HashMap;
 
 use crate::util::VecVec;
 
 type Output = u32;
 type PageNum = u32;
-type Input = (BTreeSet<(PageNum, PageNum)>, VecVec<PageNum>);
+type Input = (Vec<PageNum>, VecVec<PageNum>);
+
+// Assumption: the rules specify a total order.
+// This is necessary to make part 2 well-defined.
+// This allows us to just store the page order, and not the
+// quadratic set of rules.
 
 #[aoc_generator(day5)]
 fn parse(puzzle: &str) -> Input {
     let mut lines = puzzle.lines();
-    let mut rules = BTreeSet::new();
+    let mut rule_counts = HashMap::with_capacity(100);
     let mut pos = 0;
     for line in &mut lines {
         pos += line.len() + 1;
@@ -19,11 +24,13 @@ fn parse(puzzle: &str) -> Input {
             break;
         }
         let (left, right) = line.split_once('|').unwrap();
-        rules.insert((
-            left.parse::<PageNum>().unwrap(),
-            right.parse::<PageNum>().unwrap(),
-        ));
+        let left = left.parse::<PageNum>().unwrap();
+        let right = right.parse::<PageNum>().unwrap();
+        rule_counts.entry(right).or_insert(0);    
+        *rule_counts.entry(left).or_insert(0) += 1;
     }
+
+    let pages_in_order: Vec<PageNum> = rule_counts.keys().copied().sorted_unstable_by_key(|&page| -rule_counts[&page]).collect();
 
     let pages_estimate = 1 + (puzzle.len() - pos) / 3;
     let mut updates = VecVec::with_capacity(pages_estimate);
@@ -37,25 +44,26 @@ fn parse(puzzle: &str) -> Input {
             .map(Result::unwrap);
         updates.push_from(pages);
     }
-    (rules, updates)
+    (pages_in_order, updates)
 }
 
 #[aoc(day5, part1)]
-fn part_one((rules, updates): &Input) -> Output {
+fn part_one((page_order, updates): &Input) -> Output {
     updates
         .iter()
-        .filter(|update| is_legal(update, &rules))
+        .filter(|update| is_legal(update, &page_order))
         .map(|update| middle_page_num(&update))
         .sum()
 }
 
-fn is_legal(update: &[PageNum], rules: &BTreeSet<(PageNum, PageNum)>) -> bool {
-    for i in 0..update.len() - 1 {
-        let page = update[i];
-        // Assumption (info from part 2): rules specify a total order, so we just need to check the next one
-        let later_page = update[i + 1];
-        if rules.contains(&(later_page, page)) {
-            return false;
+fn is_legal(update: &[PageNum], page_order: &Vec<PageNum>) -> bool {
+    let mut iter_order = page_order.iter();
+
+    // eprintln!("{update:?}, {page_order:?}");
+    for page in update.iter() {
+        match iter_order.find(|&p| p == page) {
+            Some(_) => continue,
+            None => return false,
         }
     }
     // eprintln!("{update:?} is legal.");
@@ -72,22 +80,13 @@ pub fn part1(puzzle: &str) -> Output {
     part_one(&parse(puzzle))
 }
 
-// Assumption: rules specify a total order.
 #[aoc(day5, part2)]
-fn part_two((rules, updates): &Input) -> Output {
+fn part_two((page_order, updates): &Input) -> Output {
     updates
         .iter()
-        .filter(|update| !is_legal(update, &rules))
+        .filter(|update| !is_legal(update, &page_order))
         .map(|update| {
-            let mut update = update.to_vec();
-            update.sort_unstable_by(|a, b| {
-                if rules.contains(&(*a, *b)) {
-                    Ordering::Less
-                } else {
-                    Ordering::Greater
-                }
-            });
-            update
+            page_order.iter().filter(|&p| update.contains(p)).map(|&p| p).collect_vec()
         })
         .map(|update| middle_page_num(&update))
         .sum()
