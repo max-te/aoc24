@@ -104,6 +104,7 @@ impl XmasCountMachine {
         }
     }
 
+    #[inline(always)]
     fn consume(&mut self, ch: u8) {
         self.read_state = match (self.read_state, ch) {
             (XmasReadState::ReadSAM, b'X') => {
