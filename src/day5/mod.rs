@@ -1,17 +1,17 @@
 use aoc_runner_derive::{aoc, aoc_generator};
 use std::cmp::Ordering;
-use std::collections::BTreeSet;
+use std::collections::HashSet;
 
 use crate::util::VecVec;
 
 type Output = u32;
 type PageNum = u32;
-type Input = (BTreeSet<(PageNum, PageNum)>, VecVec<PageNum>);
+type Input = (HashSet<(PageNum, PageNum)>, VecVec<PageNum>);
 
 #[aoc_generator(day5)]
 fn parse(puzzle: &str) -> Input {
     let mut lines = puzzle.lines();
-    let mut rules = BTreeSet::new();
+    let mut rules = HashSet::new();
     let mut pos = 0;
     for line in &mut lines {
         pos += line.len() + 1;
@@ -49,7 +49,7 @@ fn part_one((rules, updates): &Input) -> Output {
         .sum()
 }
 
-fn is_legal(update: &[PageNum], rules: &BTreeSet<(PageNum, PageNum)>) -> bool {
+fn is_legal(update: &[PageNum], rules: &HashSet<(PageNum, PageNum)>) -> bool {
     for i in 0..update.len() - 1 {
         let page = update[i];
         // Assumption (info from part 2): rules specify a total order, so we just need to check the next one
