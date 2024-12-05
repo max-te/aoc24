@@ -1,11 +1,12 @@
 use aoc_runner_derive::{aoc, aoc_generator};
 use itertools::Itertools;
+use nohash_hasher::BuildNoHashHasher;
 use std::collections::HashMap;
 
 use crate::util::VecVec;
 
 type Output = u32;
-type PageNum = u32;
+type PageNum = u8;
 type Input = (Vec<PageNum>, VecVec<PageNum>);
 
 // Assumption: the rules specify a total order.
@@ -16,7 +17,7 @@ type Input = (Vec<PageNum>, VecVec<PageNum>);
 #[aoc_generator(day5)]
 fn parse(puzzle: &str) -> Input {
     let mut lines = puzzle.lines();
-    let mut rule_counts = HashMap::with_capacity(100);
+    let mut rule_counts: HashMap::<PageNum, i8, BuildNoHashHasher<PageNum>> = HashMap::with_capacity_and_hasher(100, BuildNoHashHasher::default());
     let mut pos = 0;
     for line in &mut lines {
         pos += line.len() + 1;
@@ -73,7 +74,7 @@ fn is_legal(update: &[PageNum], page_order: &Vec<PageNum>) -> bool {
 #[inline]
 fn middle_page_num(update: &[PageNum]) -> Output {
     debug_assert!(update.len() % 2 == 1);
-    update[(update.len()) / 2]
+    update[(update.len()) / 2] as Output
 }
 
 pub fn part1(puzzle: &str) -> Output {
