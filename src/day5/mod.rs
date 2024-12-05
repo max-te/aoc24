@@ -80,7 +80,7 @@ fn part_two((rules, updates): &Input) -> Output {
         .filter(|update| !is_legal(update, &rules))
         .map(|update| {
             let mut update = update.to_vec();
-            update.sort_by(|a, b| {
+            update.sort_unstable_by(|a, b| {
                 if rules.contains(&(*a, *b)) {
                     Ordering::Less
                 } else {
