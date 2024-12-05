@@ -50,12 +50,12 @@ fn part_one((rules, updates): &Input) -> Output {
 }
 
 fn is_legal(update: &[PageNum], rules: &BTreeSet<(PageNum, PageNum)>) -> bool {
-    for i in 0..update.len() {
+    for i in 0..update.len() - 1 {
         let page = update[i];
-        for later_page in update[i + 1..].iter() {
-            if rules.contains(&(*later_page, page)) {
-                return false;
-            }
+        // Assumption (info from part 2): rules specify a total order, so we just need to check the next one
+        let later_page = update[i + 1];
+        if rules.contains(&(later_page, page)) {
+            return false;
         }
     }
     // eprintln!("{update:?} is legal.");
