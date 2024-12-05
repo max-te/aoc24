@@ -3,7 +3,7 @@ use itertools::Itertools;
 use nohash_hasher::BuildNoHashHasher;
 use std::collections::HashMap;
 
-use crate::util::{parse_2_digits, VecVec};
+use crate::util::VecVec;
 
 type Output = u32;
 type PageNum = u8;
@@ -25,9 +25,9 @@ fn parse(puzzle: &str) -> Input {
             break;
         }
         let (left, right) = line.split_once('|').unwrap();
-        let left = parse_2_digits(left.as_bytes());
-        let right = parse_2_digits(right.as_bytes());
-        rule_counts.entry(right).or_insert(0);
+        let left = left.parse::<PageNum>().unwrap();
+        let right = right.parse::<PageNum>().unwrap();
+        rule_counts.entry(right).or_insert(0);    
         *rule_counts.entry(left).or_insert(0) += 1;
     }
 
@@ -41,8 +41,8 @@ fn parse(puzzle: &str) -> Input {
         }
         let pages = line
             .split(',')
-            .map(str::as_bytes)
-            .map(parse_2_digits);
+            .map(str::parse::<PageNum>)
+            .map(Result::unwrap);
         updates.push_from(pages);
     }
     (pages_in_order, updates)
