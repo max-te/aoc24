@@ -10,7 +10,8 @@ type Input = (HashSet<(PageNum, PageNum)>, VecVec<PageNum>);
 
 #[aoc_generator(day5)]
 fn parse(puzzle: &str) -> Input {
-    let mut lines = puzzle.lines();
+    let puzzle = puzzle.as_bytes();
+    let mut lines = puzzle.split(|x| *x == b'\n');
     let mut rules = HashSet::new();
     let mut pos = 0;
     for line in &mut lines {
@@ -18,10 +19,10 @@ fn parse(puzzle: &str) -> Input {
         if line.is_empty() {
             break;
         }
-        let (left, right) = line.split_once('|').unwrap();
+        let (left, right) = (&line[0..=1], &line[3..=4]);
         rules.insert((
-            parse_2_digits(left.as_bytes()),
-            parse_2_digits(right.as_bytes()),
+            parse_2_digits(left),
+            parse_2_digits(right),
         ));
     }
 
@@ -32,8 +33,7 @@ fn parse(puzzle: &str) -> Input {
             break;
         }
         let pages = line
-            .split(',')
-            .map(str::as_bytes)
+            .split(|x| *x == b',')
             .map(parse_2_digits);
         updates.push_from(pages);
     }
