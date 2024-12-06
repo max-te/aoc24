@@ -115,7 +115,7 @@ fn trace_base_path(
     width: Coord,
     height: Coord,
 ) -> HashSet<Guard> {
-    let mut path = HashSet::new();
+    let mut path = HashSet::with_capacity(width as usize * height as usize);
     while guard.0.in_range(width, height) {
         path.insert(guard);
         loop {
@@ -245,7 +245,7 @@ impl EdgeMap {
 fn two_cast((obstacles, guard, width, height): &NaiveInput) -> Output {
     let base_path = trace_base_path(&obstacles, *guard, *width, *height);
     let mut edge_map = EdgeMap::from_obstacles(&obstacles, *width, *height);
-    let mut blockable = HashSet::new();
+    let mut blockable = HashSet::with_capacity(base_path.len());
     for next in base_path.iter() {
         if next.0 == guard.0 {
             continue;
@@ -281,7 +281,7 @@ fn _debug_draw_cast(edge_map: &EdgeMap, guard: Guard, path: &HashSet<Guard>) {
 fn cast_path(edge_map: &EdgeMap, mut guard: Guard) -> bool {
     let width = edge_map.width();
     let height = edge_map.height();
-    let mut path = HashSet::new();
+    let mut path = HashSet::with_capacity(width as usize * height as usize / 100);
     while guard.0.in_range(width, height) {
         if !path.insert(guard) {
             return true;
