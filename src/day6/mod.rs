@@ -1,5 +1,4 @@
 use aoc_runner_derive::{aoc, aoc_generator};
-use indexmap::IndexSet;
 use std::collections::HashSet;
 
 type Output = usize;
@@ -118,11 +117,11 @@ pub fn part1(puzzle: &str) -> Output {
 #[derive(Debug)]
 struct GuardPath {
     is_loop: bool,
-    path: IndexSet<Guard>,
+    path: HashSet<Guard>,
 }
 
 fn trace_path(obstacles: &HashSet<Point>, mut guard: Guard, width: Coord, height: Coord) -> GuardPath {
-    let mut path = IndexSet::new();
+    let mut path = HashSet::new();
     let mut is_loop = false;
     while guard.0.in_range(width, height) {
         if !path.insert(guard) {
@@ -182,7 +181,10 @@ fn two_naive((obstacles, guard, width, height): &NaiveInput) -> Output {
     let mut obstacles = obstacles.clone();
     let base_path = trace_path(&obstacles, guard.clone(), *width, *height);
     let mut blockable = HashSet::new();
-    for next in base_path.path.iter().skip(1) {
+    for next in base_path.path.iter() {
+        if next.0 == guard.0 {
+            continue;
+        }
         assert!(obstacles.insert(next.0));
         let path = trace_path(&obstacles, guard.clone(), *width, *height);
         if path.is_loop {
