@@ -1,7 +1,6 @@
 use aoc_runner_derive::{aoc, aoc_generator};
 use std::collections::HashSet;
 
-
 type Output = usize;
 type Coord = i16;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -14,7 +13,12 @@ impl Point {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Facing { North, South, West, East }
+enum Facing {
+    North,
+    South,
+    West,
+    East,
+}
 
 impl Facing {
     fn step(self, point: Point) -> Point {
@@ -39,11 +43,9 @@ impl Guard {
             Facing::West => Facing::North,
         };
     }
-
 }
 
 type Input = (HashSet<Point>, Guard, Coord, Coord);
-
 
 #[aoc_generator(day6)]
 fn parse(puzzle: &str) -> Input {
@@ -54,46 +56,46 @@ fn parse(puzzle: &str) -> Input {
     let mut width = None;
     for ch in puzzle {
         match *ch {
-            b'\n' =>  {
+            b'\n' => {
                 width.get_or_insert(point.0);
                 point.1 += 1;
                 point.0 = 0;
                 continue;
-            },
+            }
             b'#' => {
                 obstacles.insert(point.clone());
-            },
+            }
             b'^' => {
                 guard = Some(Guard(point.clone(), Facing::North));
-            },
+            }
             b'>' => {
                 guard = Some(Guard(point.clone(), Facing::East));
-
-            },
+            }
             b'<' => {
                 guard = Some(Guard(point.clone(), Facing::West));
-
-            },
+            }
             b'v' => {
                 guard = Some(Guard(point.clone(), Facing::South));
-
-            },
-            b'.' => {},
+            }
+            b'.' => {}
             _ => unreachable!(),
         }
         point.0 += 1;
     }
 
-    (obstacles, guard.expect("there should be a guard in the input"), width.unwrap(), point.1)
+    (
+        obstacles,
+        guard.unwrap(),
+        width.unwrap(),
+        point.1,
+    )
 }
 
 #[aoc(day6, part1)]
 fn part_one((obstacles, guard, width, height): &Input) -> Output {
     let mut guard = *guard;
-        dbg!(guard,width, height);
     let mut visited = HashSet::new();
     while guard.0.in_range(*width, *height) {
-        dbg!(guard);
         visited.insert(guard.0.clone());
         loop {
             let step_pos = guard.1.step(guard.0);
