@@ -109,25 +109,15 @@ pub fn part1(puzzle: &str) -> Output {
     one_naive(&parse_naive(puzzle))
 }
 
-#[derive(Debug)]
-struct GuardPath {
-    is_loop: bool,
-    path: HashSet<Guard>,
-}
-
-fn trace_path(
+fn trace_base_path(
     obstacles: &HashSet<Point>,
     mut guard: Guard,
     width: Coord,
     height: Coord,
-) -> GuardPath {
+) -> HashSet<Guard> {
     let mut path = HashSet::new();
-    let mut is_loop = false;
     while guard.0.in_range(width, height) {
-        if !path.insert(guard) {
-            is_loop = true;
-            break;
-        }
+        path.insert(guard);
         loop {
             let step_pos = guard.1.step(guard.0);
             if obstacles.contains(&step_pos) {
@@ -138,65 +128,7 @@ fn trace_path(
             }
         }
     }
-    GuardPath { is_loop, path }
-}
-
-impl GuardPath {
-    fn _visits(&self, point: Point) -> bool {
-        self.path.iter().find(|p| p.0.eq(&point)).is_some()
-    }
-}
-
-fn _debug_draw(
-    obstacles: &HashSet<Point>,
-    guard: &Guard,
-    width: Coord,
-    height: Coord,
-    path: &GuardPath,
-    blocked: Option<Point>,
-) {
-    eprint!("  ");
-    for x in 0..width {
-        eprint!("{x}");
-    }
-    eprint!("\n");
-    for y in 0..height {
-        eprint!("{y:2}");
-        for x in 0..width {
-            let point = Point(x, y);
-            if blocked == Some(point) {
-                eprint!("O");
-            } else if obstacles.contains(&point) {
-                eprint!("#");
-            } else if guard.0 == point {
-                eprint!("G");
-            } else if path._visits(point) {
-                eprint!("o");
-            } else {
-                eprint!(".");
-            }
-        }
-        eprint!("\n");
-    }
-}
-
-#[aoc(day6, part2, naive)]
-fn two_naive((obstacles, guard, width, height): &NaiveInput) -> Output {
-    let mut obstacles = obstacles.clone();
-    let base_path = trace_path(&obstacles, guard.clone(), *width, *height);
-    let mut blockable = HashSet::new();
-    for next in base_path.path.iter() {
-        if next.0 == guard.0 {
-            continue;
-        }
-        assert!(obstacles.insert(next.0));
-        let path = trace_path(&obstacles, guard.clone(), *width, *height);
-        if path.is_loop {
-            blockable.insert(next.0);
-        }
-        assert!(obstacles.remove(&next.0));
-    }
-    blockable.len()
+    path
 }
 
 pub fn part2(puzzle: &str) -> Output {
@@ -212,46 +144,46 @@ struct EdgeMap {
 impl EdgeMap {
     fn with_size(width: Coord, height: Coord) -> Self {
         Self {
-            columns: (0..=width).map(|_| Vec::new()).collect(),
-            rows: (0..=height).map(|_| Vec::new()).collect(),
+            columns: (1..=width).map(|_| Vec::new()).collect(),
+            rows: (1..=height).map(|_| Vec::new()).collect(),
         }
     }
 
     fn width(&self) -> Coord {
-        (self.columns.len() - 1) as Coord
+        self.columns.len() as Coord
     }
 
     fn height(&self) -> Coord {
-        (self.rows.len() - 1) as Coord
+        self.rows.len() as Coord
     }
 
     unsafe fn append(&mut self, point: Point) {
-        self.columns[point.0 as usize].push(point.1);
-        self.rows[point.1 as usize].push(point.0);
+        self.columns[point.0 as usize - 1].push(point.1);
+        self.rows[point.1 as usize - 1].push(point.0);
     }
 
     fn insert(&mut self, point: Point) {
-        let index = self.columns[point.0 as usize]
+        let index = self.columns[point.0 as usize - 1]
             .binary_search(&point.1)
             .unwrap_err();
-        self.columns[point.0 as usize].insert(index, point.1);
-        let index = self.rows[point.1 as usize]
+        self.columns[point.0 as usize - 1].insert(index, point.1);
+        let index = self.rows[point.1 as usize - 1]
             .binary_search(&point.0)
             .unwrap_err();
-        self.rows[point.1 as usize].insert(index, point.0);
+        self.rows[point.1 as usize - 1].insert(index, point.0);
     }
 
     fn remove(&mut self, point: &Point) {
-        let index = self.columns[point.0 as usize]
+        let index = self.columns[point.0 as usize - 1]
             .binary_search(&point.1)
             .unwrap();
-        self.columns[point.0 as usize].remove(index);
-        let index = self.rows[point.1 as usize].binary_search(&point.0).unwrap();
-        self.rows[point.1 as usize].remove(index);
+        self.columns[point.0 as usize - 1].remove(index);
+        let index = self.rows[point.1 as usize - 1].binary_search(&point.0).unwrap();
+        self.rows[point.1 as usize - 1].remove(index);
     }
 
     fn contains(&self, point: &Point) -> bool {
-        self.columns[point.0 as usize]
+        self.columns[point.0 as usize - 1]
             .binary_search(&point.1)
             .is_ok()
     }
@@ -272,7 +204,7 @@ impl EdgeMap {
     fn cast(&self, guard: Guard) -> Option<Point> {
         match guard.1 {
             Facing::North | Facing::South => {
-                let col = &self.columns[guard.0 .0 as usize];
+                let col = &self.columns[guard.0 .0 as usize - 1];
                 let idx = col.binary_search(&guard.0 .1).unwrap_err();
                 if guard.1 == Facing::South {
                     if idx < col.len() {
@@ -289,7 +221,7 @@ impl EdgeMap {
                 }
             }
             Facing::East | Facing::West => {
-                let row = &self.rows[guard.0 .1 as usize];
+                let row = &self.rows[guard.0 .1 as usize - 1];
                 let idx = row.binary_search(&guard.0 .0).unwrap_err();
                 if guard.1 == Facing::East {
                     if idx < row.len() {
@@ -311,15 +243,14 @@ impl EdgeMap {
 
 #[aoc(day6, part2, cast)]
 fn two_cast((obstacles, guard, width, height): &NaiveInput) -> Output {
-    let base_path = trace_path(&obstacles, *guard, *width, *height);
+    let base_path = trace_base_path(&obstacles, *guard, *width, *height);
     let mut edge_map = EdgeMap::from_obstacles(&obstacles, *width, *height);
     let mut blockable = HashSet::new();
-    for next in base_path.path.iter() {
+    for next in base_path.iter() {
         if next.0 == guard.0 {
             continue;
         }
         edge_map.insert(next.0);
-        // eprintln!("Blockage: {:?}, Start: {:?}", next.0, guard.0);
         if cast_path(&edge_map, guard.clone()) {
             blockable.insert(next.0);
         }
@@ -355,10 +286,8 @@ fn cast_path(edge_map: &EdgeMap, mut guard: Guard) -> bool {
         if !path.insert(guard) {
             return true;
         }
-        // eprintln!("{edge_map:?}\n {guard:?}");
         match edge_map.cast(guard) {
             None => {
-                // _debug_draw_cast(&edge_map, guard, &path);
                 return false;
             }
             Some(stop_pos) => {
@@ -386,9 +315,4 @@ mod examples {
         assert_eq!(res, 6);
     }
 
-    #[test]
-    fn example2_cast() {
-        let res = two_cast(&parse_naive(&include_str!("test.txt")));
-        assert_eq!(res, 6);
-    }
 }
