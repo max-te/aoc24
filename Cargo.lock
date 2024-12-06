@@ -74,6 +74,7 @@ dependencies = [
  "aoc-runner",
  "aoc-runner-derive",
  "codspeed-criterion-compat",
+ "indexmap",
  "itertools 0.13.0",
  "paste",
  "reqwest",

@@ -1,4 +1,5 @@
 use aoc_runner_derive::{aoc, aoc_generator};
+use indexmap::IndexSet;
 use std::collections::HashSet;
 
 type Output = usize;
@@ -12,7 +13,7 @@ impl Point {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum Facing {
     North,
     South,
@@ -31,7 +32,7 @@ impl Facing {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct Guard(Point, Facing);
 
 impl Guard {
@@ -45,10 +46,10 @@ impl Guard {
     }
 }
 
-type Input = (HashSet<Point>, Guard, Coord, Coord);
+type NaiveInput = (HashSet<Point>, Guard, Coord, Coord);
 
-#[aoc_generator(day6)]
-fn parse(puzzle: &str) -> Input {
+#[aoc_generator(day6, naive)]
+fn parse(puzzle: &str) -> NaiveInput {
     let puzzle = puzzle.as_bytes();
     let mut point = Point(0, 0);
     let mut obstacles = HashSet::new();
@@ -91,8 +92,8 @@ fn parse(puzzle: &str) -> Input {
     )
 }
 
-#[aoc(day6, part1)]
-fn part_one((obstacles, guard, width, height): &Input) -> Output {
+#[aoc(day6, part1, naive)]
+fn one_naive((obstacles, guard, width, height): &NaiveInput) -> Output {
     let mut guard = *guard;
     let mut visited = HashSet::new();
     while guard.0.in_range(*width, *height) {
@@ -111,16 +112,89 @@ fn part_one((obstacles, guard, width, height): &Input) -> Output {
 }
 
 pub fn part1(puzzle: &str) -> Output {
-    part_one(&parse(puzzle))
+    one_naive(&parse(puzzle))
 }
 
-#[aoc(day6, part2)]
-fn part_two((obstacles, guard, width, height): &Input) -> Output {
-    todo!()
+#[derive(Debug)]
+struct GuardPath {
+    is_loop: bool,
+    path: IndexSet<Guard>,
+}
+
+fn trace_path(obstacles: &HashSet<Point>, mut guard: Guard, width: Coord, height: Coord) -> GuardPath {
+    let mut path = IndexSet::new();
+    let mut is_loop = false;
+    while guard.0.in_range(width, height) {
+        if !path.insert(guard) {
+            is_loop = true;
+            break;
+        }
+        loop {
+            let step_pos = guard.1.step(guard.0);
+            if obstacles.contains(&step_pos) {
+                guard.turn_right();
+            } else {
+                guard.0 = step_pos;
+                break;
+            }
+        }
+    }
+    GuardPath {
+        is_loop,
+        path,
+    }
+}
+
+impl GuardPath {
+    fn _visits(&self, point: Point) -> bool {
+        self.path.iter().find(|p| p.0.eq(&point)).is_some()
+    }
+}
+
+fn _debug_draw(obstacles: &HashSet<Point>, guard: &Guard, width: Coord, height: Coord, path: &GuardPath, blocked: Option<Point>) {
+    eprint!("  ");
+    for x in 0..width {
+        eprint!("{x}");
+    }
+    eprint!("\n");
+    for y in 0..height {
+        eprint!("{y:2}");
+        for x in 0..width {
+            let point = Point(x, y);
+            if blocked == Some(point) {
+                eprint!("O");
+            } else if obstacles.contains(&point) {
+                eprint!("#");
+            } else if guard.0 == point {
+                eprint!("G");
+            } else if path._visits(point) {
+                eprint!("o");
+            } else {
+                eprint!(".");                
+            }
+        }
+        eprint!("\n");
+    }
+}
+
+#[aoc(day6, part2, naive)]
+fn two_naive((obstacles, guard, width, height): &NaiveInput) -> Output {
+    let mut obstacles = obstacles.clone();
+    let base_path = trace_path(&obstacles, guard.clone(), *width, *height);
+    let mut blockable = HashSet::new();
+    for next in base_path.path.iter().skip(1) {
+        assert!(obstacles.insert(next.0));
+        let path = trace_path(&obstacles, guard.clone(), *width, *height);
+        if path.is_loop {
+            blockable.insert(next.0);
+        }
+        assert!(obstacles.remove(&next.0));
+    }
+    blockable.len()
 }
 
 pub fn part2(puzzle: &str) -> Output {
-    part_two(&parse(puzzle))
+    two_naive(&parse(puzzle))
 }
 
 #[cfg(test)]
@@ -133,9 +207,9 @@ mod examples {
         assert_eq!(res, 41);
     }
 
-    // #[test]
-    // fn example2() {
-    //     let res = part2(include_str!("test.txt"));
-    //     assert_eq!(res, todo!());
-    // }
+    #[test]
+    fn example2() {
+        let res = part2(include_str!("test.txt"));
+        assert_eq!(res, 6);
+    }
 }
