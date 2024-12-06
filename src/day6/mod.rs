@@ -119,7 +119,7 @@ fn one_naive((obstacles, guard, width, height): &NaiveInput) -> Output {
 }
 
 pub fn part1(puzzle: &str) -> Output {
-    one_naive(&parse_naive(puzzle))
+    one_cast(&parse_naive(puzzle))
 }
 
 fn trace_base_path(
@@ -264,7 +264,7 @@ fn two_cast((obstacles, guard, width, height): &NaiveInput) -> Output {
             continue;
         }
         edge_map.insert(next.0);
-        if cast_path(&edge_map, guard.clone()) {
+        if cast_loop(&edge_map, guard.clone()) {
             blockable.insert(next.0);
         }
         edge_map.remove(&next.0);
@@ -291,7 +291,7 @@ fn _debug_draw_cast(edge_map: &EdgeMap, guard: Guard, path: &HashSet<Guard>) {
     print!("\n\n");
 }
 
-fn cast_path(edge_map: &EdgeMap, mut guard: Guard) -> bool {
+fn cast_loop(edge_map: &EdgeMap, mut guard: Guard) -> bool {
     let width = edge_map.width();
     let height = edge_map.height();
     let mut path = HashSet::with_capacity(width as usize * height as usize / 100);
@@ -310,6 +310,29 @@ fn cast_path(edge_map: &EdgeMap, mut guard: Guard) -> bool {
         }
     }
     unreachable!()
+}
+
+
+#[aoc(day6, part1, cast)]
+fn one_cast((obstacles, guard, width, height): &NaiveInput) -> Output {
+    let edge_map = EdgeMap::from_obstacles(&obstacles, *width, *height);
+    let mut guard = *guard;
+    let mut visited = HashSet::with_capacity(*width as usize * *height as usize / 10);
+    loop {
+        let Some(cast_pos) = edge_map.cast(guard) else {
+            while guard.0.in_range(*width, *height) {
+                visited.insert(guard.0);
+                guard.0 = guard.1.step(guard.0);
+            }
+            break;
+        };
+        while guard.0 != cast_pos {
+            visited.insert(guard.0);
+            guard.0 = guard.1.step(guard.0);
+        }
+        guard.turn_right();
+    }
+    visited.len()
 }
 
 #[cfg(test)]
