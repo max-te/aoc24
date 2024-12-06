@@ -19,7 +19,7 @@ impl Hash for Point {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Facing {
     North,
     South,
@@ -38,7 +38,7 @@ impl Facing {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Guard(Point, Facing);
 
 impl Guard {
@@ -49,6 +49,12 @@ impl Guard {
             Facing::South => Facing::West,
             Facing::West => Facing::North,
         };
+    }
+}
+
+impl Hash for Guard {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_u64((self.0.0 as u64) << 32 | (self.0.1 as u64) << 16 | self.1 as u64);
     }
 }
 
