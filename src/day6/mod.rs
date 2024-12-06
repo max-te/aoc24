@@ -1,14 +1,21 @@
 use aoc_runner_derive::{aoc, aoc_generator};
 use std::collections::HashSet;
+use std::hash::{Hash, Hasher};
 
 type Output = usize;
 type Coord = u16;
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Point(Coord, Coord);
 
 impl Point {
     fn in_range(&self, width: Coord, height: Coord) -> bool {
         (1..width).contains(&self.0) && (1..height).contains(&self.1)
+    }
+}
+
+impl Hash for Point {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_u32((self.0 as u32) << 16 | self.1 as u32);
     }
 }
 
