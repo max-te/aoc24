@@ -162,19 +162,13 @@ impl EdgeMap {
         }
     }
 
-    fn width(&self) -> Coord {
-        self.columns.len() as Coord
-    }
-
-    fn height(&self) -> Coord {
-        self.rows.len() as Coord
-    }
-
+    #[inline(always)]
     unsafe fn append(&mut self, point: Point) {
         self.columns[point.0 as usize - 1].push(point.1);
         self.rows[point.1 as usize - 1].push(point.0);
     }
 
+    #[inline(always)]
     fn insert(&mut self, point: Point) {
         let index = self.columns[point.0 as usize - 1]
             .binary_search(&point.1)
@@ -186,6 +180,7 @@ impl EdgeMap {
         self.rows[point.1 as usize - 1].insert(index, point.0);
     }
 
+    #[inline(always)]
     fn remove(&mut self, point: &Point) {
         let index = self.columns[point.0 as usize - 1]
             .binary_search(&point.1)
@@ -214,6 +209,7 @@ impl EdgeMap {
         slf
     }
 
+    #[inline(always)]
     fn cast(&self, guard: Guard) -> Option<Point> {
         match guard.1 {
             Facing::North | Facing::South => {
@@ -264,7 +260,7 @@ fn two_cast((obstacles, guard, width, height): &NaiveInput) -> Output {
             continue;
         }
         edge_map.insert(next.0);
-        if cast_loop(&edge_map, guard.clone()) {
+        if cast_loop(&edge_map, *guard, *width, *height) {
             blockable.insert(next.0);
         }
         edge_map.remove(&next.0);
@@ -272,28 +268,8 @@ fn two_cast((obstacles, guard, width, height): &NaiveInput) -> Output {
     blockable.len()
 }
 
-fn _debug_draw_cast(edge_map: &EdgeMap, guard: Guard, path: &HashSet<Guard>) {
-    for y in 1..=edge_map.height() {
-        for x in 1..=edge_map.width() {
-            let pos = Point(x, y);
-            if edge_map.contains(&pos) {
-                print!("#");
-            } else if pos == guard.0 {
-                print!("G");
-            } else if path.iter().any(|g| g.0 == pos) {
-                print!("+");
-            } else {
-                print!(".");
-            }
-        }
-        print!("\n");
-    }
-    print!("\n\n");
-}
-
-fn cast_loop(edge_map: &EdgeMap, mut guard: Guard) -> bool {
-    let width = edge_map.width();
-    let height = edge_map.height();
+#[inline(always)]
+fn cast_loop(edge_map: &EdgeMap, mut guard: Guard, width: Coord, height: Coord) -> bool {
     let mut path = HashSet::with_capacity(width as usize * height as usize / 100);
     while guard.0.in_range(width, height) {
         if !path.insert(guard) {
