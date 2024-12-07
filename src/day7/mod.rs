@@ -1,5 +1,4 @@
 use aoc_runner_derive::{aoc, aoc_generator};
-use itertools::Itertools;
 
 type Num = u64;
 type Input = Vec<(Num, Vec<Num>)>;
@@ -34,18 +33,7 @@ impl Op {
             }
         }
     }
-
-    #[inline]
-    fn identity(self) -> Num {
-        match self {
-            Op::Add => 0,
-            Op::Mul => 1,
-            Op::Con => 0,
-        }
-    }
 }
-
-type Term = Vec<(Op, Num)>;
 
 #[aoc_generator(day7)]
 fn parse(puzzle: &str) -> Input {
@@ -65,125 +53,47 @@ fn parse(puzzle: &str) -> Input {
 fn one(input: &Input) -> Output {
     let mut answer = 0;
     for (res, numbers) in input {
-        let mut term = numbers
-            .iter()
-            .map(|i| {
-                assert!(*i > 0);
-                (Op::Add, *i)
-            })
-            .collect::<Vec<_>>();
-        if mul_solvable(*res, &mut term, 1) {
+        if mul_solvable(*res, numbers[0], &numbers[1..]) {
             answer += res;
         }
     }
     answer
 }
 
-fn mul_solvable(res: Num, term: &mut Term, fixed_until: usize) -> bool {
-    let current_res = calculate(&term);
-    let _debug_term = term
-        .iter()
-        .map(|(op, num)| format!(" {} {}", op, num))
-        .join("");
-    if current_res == res {
-        // eprintln!("{_debug_term} = {res}");
+fn mul_solvable(res: Num, first_value: Num, term: &[Num]) -> bool {
+    if first_value == res && term.is_empty() {
         true
-    } else if current_res > res && calculate(&term[..fixed_until]) != 1 {
-        // eprintln!("{_debug_term} > {res}");
-        let ones = term
-            .iter()
-            .enumerate()
-            .skip(fixed_until)
-            .filter(|(_i, part)| part.1 == 1 && part.0 == Op::Add)
-            .map(|i| i.0)
-            .collect::<Vec<_>>();
-        if ones.len() as Num >= current_res - res {
-            for i in ones {
-                term[i].0 = Op::Mul;
-                if mul_solvable(res, term, fixed_until) {
-                    return true;
-                }
-                term[i].0 = Op::Add;
-            }
-            false
-        } else {
-            false
-        }
+    } else if first_value > res {
+        return false;
+    } else if !term.is_empty() {
+        let num = term[0];
+        return mul_solvable(res, Op::Add.apply(first_value, num), &term[1..])
+            || mul_solvable(res, Op::Mul.apply(first_value, num), &term[1..]);
     } else {
-        // eprintln!("{_debug_term} < {res}");
-        for i in fixed_until..term.len() {
-            if term[i].0 == Op::Mul {
-                continue;
-            }
-            term[i].0 = Op::Mul;
-            if mul_solvable(res, term, i + 1) {
-                return true;
-            }
-            term[i].0 = Op::Add;
-        }
         false
     }
 }
 
-fn con_mul_solvable(res: Num, term: &mut Term, fixed_until: usize) -> bool {
-    let current_res = calculate(&term);
-    // let _debug_term = term.iter().map(|(op, num)| format!(" {} {}", op, num)).join("");
-    if current_res == res {
-        // eprintln!("{_debug_term} = {res}");
+fn con_mul_solvable(res: Num, first_value: Num, term: &[Num]) -> bool {
+    if first_value == res && term.is_empty() {
         true
-    } else if current_res > res && calculate(&term[..fixed_until]) != 1 {
-        false
+    } else if first_value > res {
+        return false;
+    } else if !term.is_empty() {
+        let num = term[0];
+        return con_mul_solvable(res, Op::Add.apply(first_value, num), &term[1..])
+            || con_mul_solvable(res, Op::Con.apply(first_value, num), &term[1..])
+            || con_mul_solvable(res, Op::Mul.apply(first_value, num), &term[1..]);
     } else {
-        // eprintln!("{_debug_term} < {res}");
-        for i in fixed_until..term.len() {
-            if term[i].1 == 1 {
-                term[i].0 = Op::Add;
-                if con_mul_solvable(res, term, i + 1) {
-                    return true;
-                }
-                term[i].0 = Op::Con;
-                if con_mul_solvable(res, term, i + 1) {
-                    return true;
-                }
-                term[i].0 = Op::Mul;
-            } else {
-                term[i].0 = Op::Mul;
-                if con_mul_solvable(res, term, i + 1) {
-                    return true;
-                }
-                term[i].0 = Op::Con;
-                if con_mul_solvable(res, term, i + 1) {
-                    return true;
-                }
-                term[i].0 = Op::Add;
-            }
-        }
         false
     }
-}
-
-#[inline]
-fn calculate(term: &[(Op, Num)]) -> Num {
-    let init = term[0].0.identity();
-    term.iter().fold(init, |acc, (op, n)| op.apply(acc, *n))
 }
 
 #[aoc(day7, part2)]
 fn two(input: &Input) -> Output {
     let mut answer = 0;
     for (res, numbers) in input {
-        let mut term = numbers
-            .iter()
-            .map(|i| {
-                assert!(*i > 0);
-                if *i == 1 {
-                    (Op::Mul, *i)
-                } else {
-                    (Op::Add, *i)
-                }
-            })
-            .collect::<Vec<_>>();
-        if con_mul_solvable(*res, &mut term, 1) {
+        if con_mul_solvable(*res, numbers[0], &numbers[1..]) {
             answer += res;
         }
     }
