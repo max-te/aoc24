@@ -130,41 +130,31 @@ fn con_mul_solvable(res: Num, term: &mut Term, fixed_until: usize) -> bool {
         // eprintln!("{_debug_term} = {res}");
         true
     } else if current_res > res && calculate(&term[..fixed_until]) != 1 {
-        // eprintln!("{_debug_term} > {res}");
-        let ones = term
-            .iter()
-            .enumerate()
-            .skip(fixed_until)
-            .filter(|(_i, part)| part.1 == 1 && part.0 == Op::Add)
-            .map(|i| i.0)
-            .collect::<Vec<_>>();
-        if ones.len() as Num >= current_res - res {
-            for i in ones {
+        false
+    } else {
+        // eprintln!("{_debug_term} < {res}");
+        for i in fixed_until..term.len() {
+            if term[i].1 == 1 {
+                term[i].0 = Op::Add;
+                if con_mul_solvable(res, term, i + 1) {
+                    return true;
+                }
+                term[i].0 = Op::Con;
+                if con_mul_solvable(res, term, i + 1) {
+                    return true;
+                }
                 term[i].0 = Op::Mul;
-                if con_mul_solvable(res, term, fixed_until) {
+            } else {
+                term[i].0 = Op::Mul;
+                if con_mul_solvable(res, term, i + 1) {
+                    return true;
+                }
+                term[i].0 = Op::Con;
+                if con_mul_solvable(res, term, i + 1) {
                     return true;
                 }
                 term[i].0 = Op::Add;
             }
-            false
-        } else {
-            false
-        }
-    } else {
-        // eprintln!("{_debug_term} < {res}");
-        for i in fixed_until..term.len() {
-            if term[i].0 == Op::Mul {
-                continue;
-            }
-            term[i].0 = Op::Mul;
-            if con_mul_solvable(res, term, i + 1) {
-                return true;
-            }
-            term[i].0 = Op::Con;
-            if con_mul_solvable(res, term, i + 1) {
-                return true;
-            }
-            term[i].0 = Op::Add;
         }
         false
     }
@@ -183,7 +173,11 @@ fn two(input: &Input) -> Output {
             .iter()
             .map(|i| {
                 assert!(*i > 0);
-                (Op::Add, *i)
+                if *i == 1 {
+                    (Op::Mul, *i)
+                } else {
+                    (Op::Add, *i)
+                }
             })
             .collect::<Vec<_>>();
         if con_mul_solvable(*res, &mut term, 1) {
