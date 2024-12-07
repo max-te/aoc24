@@ -57,18 +57,18 @@ fn parse(puzzle: &str) -> Input {
 fn one(input: &Input) -> Output {
     let mut answer = 0;
     for (res, numbers) in input {
-        let term = numbers.iter().map(|i| {
+        let mut term = numbers.iter().map(|i| {
             assert!(*i > 0);
             (Op::Add, *i)
         }).collect::<Vec<_>>();
-        if mul_solvable(*res, &term, 1) {
+        if mul_solvable(*res, &mut term, 1) {
             answer += res;
         }
     }
     answer
 }
 
-fn mul_solvable(res: Num, term: &Term, fixed_until: usize) -> bool {
+fn mul_solvable(res: Num, term: &mut Term, fixed_until: usize) -> bool {
     let current_res = calculate(&term);
     let _debug_term = term.iter().map(|(op, num)| format!(" {} {}", op, num)).join("");
     if current_res == res {
@@ -79,11 +79,11 @@ fn mul_solvable(res: Num, term: &Term, fixed_until: usize) -> bool {
         let ones = term.iter().enumerate().skip(fixed_until).filter(|(_i, part)| part.1 == 1 && part.0 == Op::Add).map(|i| i.0).collect::<Vec<_>>();
         if ones.len() as Num >= current_res - res {
             for i in ones {
-                let mut term = term.clone();
                 term[i].0 = Op::Mul;
-                if mul_solvable(res, &term, fixed_until) {
+                if mul_solvable(res, term, fixed_until) {
                     return true;
                 }
+                term[i].0 = Op::Add;
             }
             false
         } else {
@@ -95,19 +95,19 @@ fn mul_solvable(res: Num, term: &Term, fixed_until: usize) -> bool {
             if term[i].0 == Op::Mul {
                 continue
             }
-            let mut term = term.clone();
             term[i].0 = Op::Mul;
-            if mul_solvable(res, &term, i + 1) {
+            if mul_solvable(res, term, i + 1) {
                 return true;
             }
+            term[i].0 = Op::Add;
         }
         false
     }
 }
 
-fn con_mul_solvable(res: Num, term: &Term, fixed_until: usize) -> bool {
+fn con_mul_solvable(res: Num, term: &mut Term, fixed_until: usize) -> bool {
     let current_res = calculate(&term);
-    let _debug_term = term.iter().map(|(op, num)| format!(" {} {}", op, num)).join("");
+    // let _debug_term = term.iter().map(|(op, num)| format!(" {} {}", op, num)).join("");
     if current_res == res {
         // eprintln!("{_debug_term} = {res}");
         true
@@ -116,11 +116,11 @@ fn con_mul_solvable(res: Num, term: &Term, fixed_until: usize) -> bool {
         let ones = term.iter().enumerate().skip(fixed_until).filter(|(_i, part)| part.1 == 1 && part.0 == Op::Add).map(|i| i.0).collect::<Vec<_>>();
         if ones.len() as Num >= current_res - res {
             for i in ones {
-                let mut term = term.clone();
                 term[i].0 = Op::Mul;
-                if con_mul_solvable(res, &term, fixed_until) {
+                if con_mul_solvable(res, term, fixed_until) {
                     return true;
                 }
+                term[i].0 = Op::Add;
             }
             false
         } else {
@@ -132,15 +132,15 @@ fn con_mul_solvable(res: Num, term: &Term, fixed_until: usize) -> bool {
             if term[i].0 == Op::Mul {
                 continue
             }
-            let mut term = term.clone();
             term[i].0 = Op::Mul;
-            if con_mul_solvable(res, &term, i + 1) {
+            if con_mul_solvable(res, term, i + 1) {
                 return true;
             }
             term[i].0 = Op::Con;
-            if con_mul_solvable(res, &term, i + 1) {
+            if con_mul_solvable(res, term, i + 1) {
                 return true;
             }
+            term[i].0 = Op::Add;
         }
         false
     }
@@ -155,11 +155,11 @@ fn calculate(term: &[(Op, Num)]) -> Num {
 fn two(input: &Input) -> Output {
     let mut answer = 0;
     for (res, numbers) in input {
-        let term = numbers.iter().map(|i| {
+        let mut term = numbers.iter().map(|i| {
             assert!(*i > 0);
             (Op::Add, *i)
         }).collect::<Vec<_>>();
-        if con_mul_solvable(*res, &term, 1) {
+        if con_mul_solvable(*res, &mut term, 1) {
             answer += res;
         }
     }
