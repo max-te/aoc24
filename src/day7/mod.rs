@@ -23,6 +23,7 @@ impl std::fmt::Display for Op {
 }
 
 impl Op {
+    #[inline]
     fn apply(&self, a: Num, b: Num) -> Num {
         match self {
             Op::Add => a + b,
@@ -34,6 +35,7 @@ impl Op {
         }
     }
 
+    #[inline]
     fn identity(self) -> Num {
         match self {
             Op::Add => 0,
@@ -160,6 +162,7 @@ fn con_mul_solvable(res: Num, term: &mut Term, fixed_until: usize) -> bool {
     }
 }
 
+#[inline]
 fn calculate(term: &[(Op, Num)]) -> Num {
     let init = term[0].0.identity();
     term.iter().fold(init, |acc, (op, n)| op.apply(acc, *n))
