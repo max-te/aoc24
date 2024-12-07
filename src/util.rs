@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 
 pub struct VecVec<T> {
     lengths: Vec<usize>,
@@ -54,4 +55,70 @@ pub fn parse_2_digits(digits: &[u8]) -> u8 {
   debug_assert!(digits.len() == 2);
   debug_assert!(digits[0].is_ascii_digit() && digits[1].is_ascii_digit());
   (digits[0] - '0' as u8) * 10 + digits[1] - '0' as u8
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct MyRange<T>(T, T);
+
+impl<T> MyRange<T> {
+    pub fn as_std(self) -> std::ops::Range<T> {
+        self.0..self.1
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GroupedView<'a, T> {
+    pub data: &'a [T],
+    pub groups: Vec<MyRange<usize>>,
+}
+
+impl <'a, T> GroupedView<'a, T> {
+    pub fn of_singletons(data: &'a [T]) -> Self {
+        Self {
+            data,
+            groups: (0..data.len()).map(|i| MyRange(i, i + 1)).collect(),
+        }
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &[T]> {
+        self.groups.iter().map(|range| &self.data[range.as_std()])
+    }
+
+    pub fn len(&self) -> usize {
+        self.groups.len()
+    }
+    
+    pub fn merge_left(&mut self, i: usize) -> usize {
+        let dissolved = self.groups.remove(i);
+        debug_assert!(self.groups[i - 1].1 == dissolved.0);
+        self.groups[i - 1].1 = dissolved.1;
+        dissolved.0
+    }
+
+    pub fn split(&mut self, i: usize, split_point: usize) {
+        debug_assert!(self.groups[i].as_std().contains(&split_point));
+        self.groups.insert(i + 1, MyRange(split_point, self.groups[i].1));
+        self.groups[i].1 = split_point;
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn merge_split_noop() {
+        let things = [1, 2, 3, 4, 5];
+        let mut view = GroupedView::of_singletons(&things);
+        let orig = view.clone();
+        assert_eq!(view.len(), 5);
+        let merge_point = view.merge_left(2);
+        assert_eq!(view.len(), 4);
+        assert_eq!(merge_point, 2);
+        view.split(1, merge_point);
+        assert_eq!(view.len(), 5);
+        assert_eq!(view, orig);
+    }
+
 }
