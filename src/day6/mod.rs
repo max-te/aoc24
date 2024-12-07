@@ -54,7 +54,7 @@ impl Guard {
 
 impl Hash for Guard {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write_u64((self.0.0 as u64) << 32 | (self.0.1 as u64) << 16 | self.1 as u64);
+        state.write_u64((self.0 .0 as u64) << 32 | (self.0 .1 as u64) << 16 | self.1 as u64);
     }
 }
 
@@ -186,7 +186,9 @@ impl EdgeMap {
             .binary_search(&point.1)
             .unwrap();
         self.columns[point.0 as usize - 1].remove(index);
-        let index = self.rows[point.1 as usize - 1].binary_search(&point.0).unwrap();
+        let index = self.rows[point.1 as usize - 1]
+            .binary_search(&point.0)
+            .unwrap();
         self.rows[point.1 as usize - 1].remove(index);
     }
 
@@ -288,7 +290,6 @@ fn cast_loop(edge_map: &EdgeMap, mut guard: Guard, width: Coord, height: Coord) 
     unreachable!()
 }
 
-
 #[aoc(day6, part1, cast)]
 fn one_cast((obstacles, guard, width, height): &NaiveInput) -> Output {
     let edge_map = EdgeMap::from_obstacles(&obstacles, *width, *height);
@@ -326,5 +327,4 @@ mod examples {
         let res = part2(include_str!("test.txt"));
         assert_eq!(res, 6);
     }
-
 }

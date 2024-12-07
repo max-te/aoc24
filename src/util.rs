@@ -52,9 +52,9 @@ impl<'this, T> Iterator for VecVecIter<'this, T> {
 
 #[inline]
 pub fn parse_2_digits(digits: &[u8]) -> u8 {
-  debug_assert!(digits.len() == 2);
-  debug_assert!(digits[0].is_ascii_digit() && digits[1].is_ascii_digit());
-  (digits[0] - '0' as u8) * 10 + digits[1] - '0' as u8
+    debug_assert!(digits.len() == 2);
+    debug_assert!(digits[0].is_ascii_digit() && digits[1].is_ascii_digit());
+    (digits[0] - '0' as u8) * 10 + digits[1] - '0' as u8
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -72,7 +72,7 @@ pub struct GroupedView<'a, T> {
     pub groups: Vec<MyRange<usize>>,
 }
 
-impl <'a, T> GroupedView<'a, T> {
+impl<'a, T> GroupedView<'a, T> {
     pub fn of_singletons(data: &'a [T]) -> Self {
         Self {
             data,
@@ -87,7 +87,7 @@ impl <'a, T> GroupedView<'a, T> {
     pub fn len(&self) -> usize {
         self.groups.len()
     }
-    
+
     pub fn merge_left(&mut self, i: usize) -> usize {
         let dissolved = self.groups.remove(i);
         debug_assert!(self.groups[i - 1].1 == dissolved.0);
@@ -97,11 +97,11 @@ impl <'a, T> GroupedView<'a, T> {
 
     pub fn split(&mut self, i: usize, split_point: usize) {
         debug_assert!(self.groups[i].as_std().contains(&split_point));
-        self.groups.insert(i + 1, MyRange(split_point, self.groups[i].1));
+        self.groups
+            .insert(i + 1, MyRange(split_point, self.groups[i].1));
         self.groups[i].1 = split_point;
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -120,5 +120,4 @@ mod tests {
         assert_eq!(view.len(), 5);
         assert_eq!(view, orig);
     }
-
 }

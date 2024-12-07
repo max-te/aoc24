@@ -16,21 +16,17 @@ fn parse(puzzle: &str) -> Input {
     while puzzle[cursor] != b'\n' {
         let line = &puzzle[cursor..];
         let (left, right) = (&line[0..=1], &line[3..=4]);
-        rules.insert((
-            parse_2_digits(left),
-            parse_2_digits(right),
-        ));
+        rules.insert((parse_2_digits(left), parse_2_digits(right)));
         cursor += 6;
     }
 
-    let pages_estimate = 1+ (puzzle.len() - cursor) / 3;
+    let pages_estimate = 1 + (puzzle.len() - cursor) / 3;
     let mut updates = VecVec::with_capacity(pages_estimate);
     for line in puzzle[cursor + 1..].split(|x| *x == b'\n') {
         if line.is_empty() {
             break;
         }
-        let pages = line.chunks(3)
-            .map(|c| parse_2_digits(&c[..2]));
+        let pages = line.chunks(3).map(|c| parse_2_digits(&c[..2]));
         updates.push_from(pages);
     }
     (rules, updates)

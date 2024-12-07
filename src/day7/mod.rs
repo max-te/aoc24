@@ -30,7 +30,7 @@ impl Op {
             Op::Con => {
                 let b_digits = b.checked_ilog10().unwrap_or(0) + 1;
                 a * (10 as Num).pow(b_digits) + b
-            },
+            }
         }
     }
 
@@ -47,20 +47,29 @@ type Term = Vec<(Op, Num)>;
 
 #[aoc_generator(day7)]
 fn parse(puzzle: &str) -> Input {
-    puzzle.lines().map(|l| {
-        let (res, parts) = l.split_once(": ").unwrap();
-        (res.parse().unwrap(), parts.split(' ').map(|s| s.parse().unwrap()).collect())
-    }).collect()
+    puzzle
+        .lines()
+        .map(|l| {
+            let (res, parts) = l.split_once(": ").unwrap();
+            (
+                res.parse().unwrap(),
+                parts.split(' ').map(|s| s.parse().unwrap()).collect(),
+            )
+        })
+        .collect()
 }
 
 #[aoc(day7, part1)]
 fn one(input: &Input) -> Output {
     let mut answer = 0;
     for (res, numbers) in input {
-        let mut term = numbers.iter().map(|i| {
-            assert!(*i > 0);
-            (Op::Add, *i)
-        }).collect::<Vec<_>>();
+        let mut term = numbers
+            .iter()
+            .map(|i| {
+                assert!(*i > 0);
+                (Op::Add, *i)
+            })
+            .collect::<Vec<_>>();
         if mul_solvable(*res, &mut term, 1) {
             answer += res;
         }
@@ -70,13 +79,22 @@ fn one(input: &Input) -> Output {
 
 fn mul_solvable(res: Num, term: &mut Term, fixed_until: usize) -> bool {
     let current_res = calculate(&term);
-    let _debug_term = term.iter().map(|(op, num)| format!(" {} {}", op, num)).join("");
+    let _debug_term = term
+        .iter()
+        .map(|(op, num)| format!(" {} {}", op, num))
+        .join("");
     if current_res == res {
         // eprintln!("{_debug_term} = {res}");
         true
     } else if current_res > res && calculate(&term[..fixed_until]) != 1 {
         // eprintln!("{_debug_term} > {res}");
-        let ones = term.iter().enumerate().skip(fixed_until).filter(|(_i, part)| part.1 == 1 && part.0 == Op::Add).map(|i| i.0).collect::<Vec<_>>();
+        let ones = term
+            .iter()
+            .enumerate()
+            .skip(fixed_until)
+            .filter(|(_i, part)| part.1 == 1 && part.0 == Op::Add)
+            .map(|i| i.0)
+            .collect::<Vec<_>>();
         if ones.len() as Num >= current_res - res {
             for i in ones {
                 term[i].0 = Op::Mul;
@@ -93,7 +111,7 @@ fn mul_solvable(res: Num, term: &mut Term, fixed_until: usize) -> bool {
         // eprintln!("{_debug_term} < {res}");
         for i in fixed_until..term.len() {
             if term[i].0 == Op::Mul {
-                continue
+                continue;
             }
             term[i].0 = Op::Mul;
             if mul_solvable(res, term, i + 1) {
@@ -113,7 +131,13 @@ fn con_mul_solvable(res: Num, term: &mut Term, fixed_until: usize) -> bool {
         true
     } else if current_res > res && calculate(&term[..fixed_until]) != 1 {
         // eprintln!("{_debug_term} > {res}");
-        let ones = term.iter().enumerate().skip(fixed_until).filter(|(_i, part)| part.1 == 1 && part.0 == Op::Add).map(|i| i.0).collect::<Vec<_>>();
+        let ones = term
+            .iter()
+            .enumerate()
+            .skip(fixed_until)
+            .filter(|(_i, part)| part.1 == 1 && part.0 == Op::Add)
+            .map(|i| i.0)
+            .collect::<Vec<_>>();
         if ones.len() as Num >= current_res - res {
             for i in ones {
                 term[i].0 = Op::Mul;
@@ -130,7 +154,7 @@ fn con_mul_solvable(res: Num, term: &mut Term, fixed_until: usize) -> bool {
         // eprintln!("{_debug_term} < {res}");
         for i in fixed_until..term.len() {
             if term[i].0 == Op::Mul {
-                continue
+                continue;
             }
             term[i].0 = Op::Mul;
             if con_mul_solvable(res, term, i + 1) {
@@ -155,17 +179,19 @@ fn calculate(term: &[(Op, Num)]) -> Num {
 fn two(input: &Input) -> Output {
     let mut answer = 0;
     for (res, numbers) in input {
-        let mut term = numbers.iter().map(|i| {
-            assert!(*i > 0);
-            (Op::Add, *i)
-        }).collect::<Vec<_>>();
+        let mut term = numbers
+            .iter()
+            .map(|i| {
+                assert!(*i > 0);
+                (Op::Add, *i)
+            })
+            .collect::<Vec<_>>();
         if con_mul_solvable(*res, &mut term, 1) {
             answer += res;
         }
     }
     answer
 }
-
 
 pub fn part1(puzzle: &str) -> Output {
     one(&parse(puzzle))
@@ -190,5 +216,4 @@ mod examples {
         let res = part2(include_str!("test.txt"));
         assert_eq!(res, 11387);
     }
-
 }
