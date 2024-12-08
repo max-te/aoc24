@@ -38,8 +38,13 @@ struct Map {
 }
 
 impl Map {
+    #[inline]
     fn covers(&self, point: &Point) -> bool {
         (0..self.width).contains(&point.0) && (0..self.height).contains(&point.1)
+    }
+
+    fn size(&self) -> Coord {
+        self.width * self.height
     }
 }
 
@@ -73,7 +78,7 @@ type Input = Map;
 fn parse(puzzle: &str) -> Input {
     let puzzle = puzzle.as_bytes();
     let mut point = Point(0, 0);
-    let mut towers: HashMap<u8, Vec<Point>> = HashMap::new();
+    let mut towers: HashMap<u8, Vec<Point>> = HashMap::with_capacity(128);
     let mut width = None;
     for ch in puzzle {
         match *ch {
@@ -84,7 +89,10 @@ fn parse(puzzle: &str) -> Input {
                 continue;
             }
             b'.' => {}
-            ch => towers.entry(ch).or_default().push(point),
+            ch => towers
+                .entry(ch)
+                .or_insert_with(|| Vec::with_capacity(10))
+                .push(point),
         }
         point.0 += 1;
     }
@@ -100,7 +108,7 @@ fn parse(puzzle: &str) -> Input {
 
 #[aoc(day8, part1)]
 fn one(map: &Input) -> Output {
-    let mut antinodes = HashSet::new();
+    let mut antinodes = HashSet::with_capacity((map.size() / 10) as usize);
     for points in map.towers.values() {
         for (i, first) in points.iter().enumerate() {
             for second in &points[i + 1..] {
@@ -123,7 +131,7 @@ fn one(map: &Input) -> Output {
 
 #[aoc(day8, part2)]
 fn two(map: &Input) -> Output {
-    let mut antinodes = HashSet::new();
+    let mut antinodes = HashSet::with_capacity((map.size() / 2) as usize);
     for points in map.towers.values() {
         for (i, first) in points.iter().enumerate() {
             for second in &points[i + 1..] {
