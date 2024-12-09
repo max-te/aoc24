@@ -57,6 +57,12 @@ pub fn parse_2_digits(digits: &[u8]) -> u8 {
     (digits[0] - '0' as u8) * 10 + digits[1] - '0' as u8
 }
 
+#[inline]
+pub fn parse_digit(digit: &u8) -> u8 {
+    debug_assert!(digit.is_ascii_digit());
+    digit - '0' as u8
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct MyRange<T>(T, T);
 
