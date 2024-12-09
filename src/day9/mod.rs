@@ -179,8 +179,8 @@ fn two(map: &str) -> Output {
 fn two_linear(map: &str) -> Output {
     let map = map.as_bytes();
 
-    let mut files = VecDeque::new();
-    let mut spaces = VecDeque::new();
+    let mut files = VecDeque::with_capacity(map.len() / 2 + 1);
+    let mut spaces = VecDeque::with_capacity(map.len() / 2);
     let mut pos = 0;
     for i in 0..map.len() {
         if map[i] == b'\n' {
