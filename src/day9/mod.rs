@@ -177,27 +177,31 @@ fn two(map: &str) -> Output {
 
 #[aoc(day9, part2, linear)]
 fn two_linear(map: &str) -> Output {
-    let map = map.as_bytes();
+    let map = {
+        let mut map = map.as_bytes();
+        if map[map.len() - 1] == b'\n' {
+            map = &map[0..map.len() - 1];
+        }
+        map
+    };
 
     let mut files = VecDeque::with_capacity(map.len() / 2 + 1);
-    let mut spaces = Vec::with_capacity(map.len() / 2);
     let mut pos = 0;
     for i in 0..map.len() {
-        if map[i] == b'\n' {
-            break;
-        }
         let size = parse_digit(&map[i]) as usize;
         if i % 2 == 0 {
             let file_id = i / 2;
             files.push_front((file_id, pos, size))
-        } else {
-            spaces.push((pos, size))
         }
         pos += size;
     }
 
     let mut checksum = 0;
-    for (mut space_pos, mut space_size) in spaces {
+    let mut space_idx = 1;
+    let mut space_pos = 0;
+    while space_idx < map.len() {
+        space_pos += parse_digit(&map[space_idx - 1]) as usize;
+        let mut space_size = parse_digit(&map[space_idx]) as usize;
         let mut f_idx = 0;
         while f_idx < files.len() {
             if space_size == 0 {
@@ -216,6 +220,8 @@ fn two_linear(map: &str) -> Output {
             }
             f_idx += 1;
         }
+        space_pos += space_size;
+        space_idx += 2;
     }
     for (file_id, file_pos, file_size) in files {
         checksum += checksum_summand(file_id, file_pos, file_size);
