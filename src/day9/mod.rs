@@ -180,7 +180,7 @@ fn two_linear(map: &str) -> Output {
     let map = map.as_bytes();
 
     let mut files = VecDeque::with_capacity(map.len() / 2 + 1);
-    let mut spaces = VecDeque::with_capacity(map.len() / 2);
+    let mut spaces = Vec::with_capacity(map.len() / 2);
     let mut pos = 0;
     for i in 0..map.len() {
         if map[i] == b'\n' {
@@ -191,16 +191,13 @@ fn two_linear(map: &str) -> Output {
             let file_id = i / 2;
             files.push_front((file_id, pos, size))
         } else {
-            spaces.push_back((pos, size))
+            spaces.push((pos, size))
         }
         pos += size;
     }
 
     let mut checksum = 0;
-    loop {
-        let Some((mut space_pos, mut space_size)) = spaces.pop_front() else {
-            break;
-        };
+    for (mut space_pos, mut space_size) in spaces {
         let mut f_idx = 0;
         while f_idx < files.len() {
             if space_size == 0 {
