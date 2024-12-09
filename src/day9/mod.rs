@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use crate::util::parse_digit;
 use aoc_runner_derive::{aoc, aoc_generator};
 use itertools::Itertools;
@@ -173,12 +175,64 @@ fn two(map: &str) -> Output {
     checksum
 }
 
+#[aoc(day9, part2, linear)]
+fn two_linear(map: &str) -> Output {
+    let map = map.as_bytes();
+
+    let mut files = VecDeque::new();
+    let mut spaces = VecDeque::new();
+    let mut pos = 0;
+    for i in 0..map.len() {
+        if map[i] == b'\n' {
+            break;
+        }
+        let size = parse_digit(&map[i]) as usize;
+        if i % 2 == 0 {
+            let file_id = i / 2;
+            files.push_front((file_id, pos, size))
+        } else {
+            spaces.push_back((pos, size))
+        }
+        pos += size;
+    }
+
+    let mut checksum = 0;
+    loop {
+        let Some((mut space_pos, mut space_size)) = spaces.pop_front() else {
+            break;
+        };
+        let mut f_idx = 0;
+        while f_idx < files.len() {
+            if space_size == 0 {
+                break;
+            }
+            let (file_id, file_pos, size) = files[f_idx];
+            if file_pos <= space_pos {
+                break;
+            }
+            if size <= space_size {
+                files.remove(f_idx);
+                checksum += checksum_summand(file_id, space_pos, size);
+                space_pos += size;
+                space_size -= size;
+                continue;
+            }
+            f_idx += 1;
+        }
+    }
+    for (file_id, file_pos, file_size) in files {
+        checksum += checksum_summand(file_id, file_pos, file_size);
+    }
+
+    checksum
+}
+
 pub fn part1(puzzle: &str) -> Output {
     one_pass(puzzle)
 }
 
 pub fn part2(puzzle: &str) -> Output {
-    two(&puzzle)
+    two_linear(&puzzle)
 }
 
 #[cfg(test)]
@@ -193,7 +247,7 @@ mod examples {
 
     #[test]
     fn example2() {
-        let res = part2(include_str!("test.txt"));
+        let res = two(include_str!("test.txt"));
         assert_eq!(res, 2858);
     }
 
@@ -201,5 +255,11 @@ mod examples {
     fn example1_onepass() {
         let res = one_pass(&include_str!("test.txt"));
         assert_eq!(res, 1928);
+    }
+
+    #[test]
+    fn example2_linea() {
+        let res = two_linear(include_str!("test.txt"));
+        assert_eq!(res, 2858);
     }
 }
