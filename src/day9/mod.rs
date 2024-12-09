@@ -5,7 +5,8 @@ use itertools::Itertools;
 type Output = usize;
 type Input = Vec<Output>;
 
-#[aoc_generator(day9)]
+#[aoc_generator(day9, part1, naive)]
+#[aoc_generator(day9, part2)]
 fn parse(puzzle: &str) -> Input {
     let puzzle = puzzle.as_bytes();
     let mut numbers = Vec::with_capacity(puzzle.len());
@@ -61,7 +62,13 @@ fn one(map: &Input) -> Output {
 }
 
 #[aoc(day9, part1, one_pass)]
-fn one_pass(map: &Input) -> Output {
+fn one_pass(map: &str) -> Output {
+    let mut map = map.as_bytes();
+    if map[map.len() - 1] == b'\n' {
+        map = &map[0..map.len() - 1];
+    }
+    let map = map;
+
     let mut left_idx = 0;
     let mut right_idx = map.len() - 1;
     if right_idx % 2 == 1 {
@@ -69,20 +76,20 @@ fn one_pass(map: &Input) -> Output {
         right_idx -= 1;
     }
     let mut right_file_id = right_idx / 2;
-    let mut right_file_size_remain = map[right_idx];
+    let mut right_file_size_remain = parse_digit(&map[right_idx]) as usize;
     let mut write_pos = 0;
     let mut checksum = 0;
 
     while right_idx > left_idx {
         if left_idx % 2 == 0 {
             let left_file_id = left_idx / 2;
-            let left_file_size = map[left_idx];
+            let left_file_size = parse_digit(&map[left_idx]) as usize;
             checksum += checksum_summand(left_file_id, write_pos, left_file_size);
             // eprint!("L{left_file_size}x{left_file_id} ");
             write_pos += left_file_size;
             left_idx += 1;
         } else {
-            let mut left_space_size = map[left_idx];
+            let mut left_space_size = parse_digit(&map[left_idx]) as usize;
             while left_space_size > 0 {
                 if right_file_size_remain <= left_space_size {
                     checksum += checksum_summand(right_file_id, write_pos, right_file_size_remain);
@@ -91,7 +98,7 @@ fn one_pass(map: &Input) -> Output {
                     left_space_size -= right_file_size_remain;
                     right_idx -= 2;
                     right_file_id = right_idx / 2;
-                    right_file_size_remain = map[right_idx];
+                    right_file_size_remain = parse_digit(&map[right_idx]) as usize;
                 } else {
                     checksum += checksum_summand(right_file_id, write_pos, left_space_size);
                     // eprint!("R{left_space_size}x{right_file_id} ");
@@ -161,7 +168,7 @@ fn two(map: &Input) -> Output {
 }
 
 pub fn part1(puzzle: &str) -> Output {
-    one_pass(&parse(puzzle))
+    one_pass(puzzle)
 }
 
 pub fn part2(puzzle: &str) -> Output {
@@ -186,7 +193,7 @@ mod examples {
 
     #[test]
     fn example1_onepass() {
-        let res = one_pass(&parse(include_str!("test.txt")));
+        let res = one_pass(&include_str!("test.txt"));
         assert_eq!(res, 1928);
     }
 }
