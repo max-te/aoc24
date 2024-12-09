@@ -8,12 +8,14 @@ type Input = Vec<Output>;
 #[aoc_generator(day9)]
 fn parse(puzzle: &str) -> Input {
     let puzzle = puzzle.as_bytes();
-    puzzle
-        .iter()
-        .filter(|ch| **ch != b'\n')
-        .map(parse_digit)
-        .map(|i| i as Output)
-        .collect()
+    let mut numbers = Vec::with_capacity(puzzle.len());
+    for ch in puzzle.iter() {
+        if *ch == b'\n' {
+            break;
+        }
+        numbers.push(parse_digit(ch) as usize);
+    }
+    numbers
 }
 
 #[aoc(day9, part1, naive)]
