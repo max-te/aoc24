@@ -6,7 +6,6 @@ type Output = usize;
 type Input = Vec<Output>;
 
 #[aoc_generator(day9, part1, naive)]
-#[aoc_generator(day9, part2)]
 fn parse(puzzle: &str) -> Input {
     let puzzle = puzzle.as_bytes();
     let mut numbers = Vec::with_capacity(puzzle.len());
@@ -123,17 +122,24 @@ fn checksum_summand(file_id: usize, from_pos: usize, block_count: usize) -> usiz
 }
 
 #[aoc(day9, part2)]
-fn two(map: &Input) -> Output {
+fn two(map: &str) -> Output {
+    let map = map.as_bytes();
+
     let mut files = Vec::new();
     let mut spaces = Vec::new();
     let mut pos = 0;
-    for (file_id, mut sizes) in map.into_iter().chunks(2).into_iter().enumerate() {
-        let file_size = *(sizes.next().unwrap());
-        files.push((file_id, pos, file_size));
-        pos += file_size;
-        let space_after = *(sizes.next().unwrap_or(&0));
-        spaces.push((pos, space_after));
-        pos += space_after;
+    for i in 0..map.len() {
+        if map[i] == b'\n' {
+            break;
+        }
+        let size = parse_digit(&map[i]) as usize;
+        if i % 2 == 0 {
+            let file_id = i / 2;
+            files.push((file_id, pos, size))
+        } else {
+            spaces.push((pos, size))
+        }
+        pos += size;
     }
 
     for (_file_id, file_pos, file_size) in files.iter_mut().rev() {
@@ -172,7 +178,7 @@ pub fn part1(puzzle: &str) -> Output {
 }
 
 pub fn part2(puzzle: &str) -> Output {
-    two(&parse(puzzle))
+    two(&puzzle)
 }
 
 #[cfg(test)]
