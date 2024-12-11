@@ -1,4 +1,4 @@
-use std::{collections::HashMap, ops::Div};
+use std::collections::HashMap;
 
 use aoc_runner_derive::{aoc, aoc_generator};
 
@@ -9,6 +9,7 @@ type Input = Vec<Num>;
 
 #[aoc_generator(day11)]
 fn parse(input: &str) -> Input {
+  let input = input.trim_end();
   input.split(" ").map(str::parse).map(Result::unwrap).collect::<Vec<Num>>()
 }
 
