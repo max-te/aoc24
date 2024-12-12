@@ -1,3 +1,4 @@
+use rustc_hash::{FxBuildHasher, FxHashMap};
 use std::{collections::HashMap, iter::zip};
 
 use aoc_runner_derive::{aoc, aoc_generator};
@@ -37,7 +38,8 @@ pub fn part1(puzzle: &str) -> Output {
 
 #[aoc(day1, part2)]
 fn part_two(input: &Input) -> Output {
-    let mut counts: HashMap<&u64, u64> = HashMap::with_capacity(input.1.len());
+    let mut counts: FxHashMap<&u64, u64> =
+        HashMap::with_capacity_and_hasher(input.1.len(), FxBuildHasher::default());
     for number in input.1.iter() {
         *counts.entry(number).or_default() += 1
     }

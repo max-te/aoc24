@@ -1,7 +1,5 @@
-use std::{
-    collections::{HashMap, HashSet},
-    hash::Hash,
-};
+use rustc_hash::{FxBuildHasher, FxHashMap};
+use std::{collections::HashSet, hash::Hash};
 
 use crate::util::parse_digit;
 use aoc_runner_derive::{aoc, aoc_generator};
@@ -83,10 +81,11 @@ fn one(map: &Input) -> Output {
         .filter(|(_, d)| **d == 0)
         .map(|(i, _)| map.to_point(i));
     for trailhead in trailheads {
-        let mut frontier = HashSet::new();
+        let mut frontier = HashSet::with_capacity_and_hasher(1, FxBuildHasher::default());
         frontier.insert(trailhead);
         for level in 1..=9 {
-            let mut new_frontier = HashSet::new();
+            let mut new_frontier =
+                HashSet::with_capacity_and_hasher(4 * frontier.len(), FxBuildHasher::default());
             for point in frontier {
                 for neighbor in map.neighbors(&point) {
                     if map.get(&neighbor) == level {
@@ -111,11 +110,11 @@ fn two(map: &Input) -> Output {
         .filter(|(_, d)| **d == 0)
         .map(|(i, _)| map.to_point(i));
     for trailhead in trailheads {
-        let mut frontier = HashMap::new();
+        let mut frontier = FxHashMap::default();
         frontier.insert(trailhead, 1);
 
         for level in 1..=9 {
-            let mut new_frontier = HashMap::new();
+            let mut new_frontier = FxHashMap::default();
             for (point, num_trails) in frontier {
                 for neighbor in map.neighbors(&point) {
                     if map.get(&neighbor) == level {

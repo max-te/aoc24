@@ -1,4 +1,5 @@
 use aoc_runner_derive::{aoc, aoc_generator};
+use rustc_hash::{FxBuildHasher, FxHashMap};
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 
@@ -34,7 +35,7 @@ struct Delta(Coord, Coord);
 struct Map {
     width: Coord,
     height: Coord,
-    towers: HashMap<u8, Vec<Point>>,
+    towers: FxHashMap<u8, Vec<Point>>,
 }
 
 impl Map {
@@ -78,7 +79,8 @@ type Input = Map;
 fn parse(puzzle: &str) -> Input {
     let puzzle = puzzle.as_bytes();
     let mut point = Point(0, 0);
-    let mut towers: HashMap<u8, Vec<Point>> = HashMap::with_capacity(128);
+    let mut towers: FxHashMap<u8, Vec<Point>> =
+        HashMap::with_capacity_and_hasher(128, FxBuildHasher::default());
     let mut width = None;
     for ch in puzzle {
         match *ch {
@@ -108,7 +110,8 @@ fn parse(puzzle: &str) -> Input {
 
 #[aoc(day8, part1)]
 fn one(map: &Input) -> Output {
-    let mut antinodes = HashSet::with_capacity((map.size() / 10) as usize);
+    let mut antinodes =
+        HashSet::with_capacity_and_hasher((map.size() / 10) as usize, FxBuildHasher::default());
     for points in map.towers.values() {
         for (i, first) in points.iter().enumerate() {
             for second in &points[i + 1..] {
@@ -131,7 +134,8 @@ fn one(map: &Input) -> Output {
 
 #[aoc(day8, part2)]
 fn two(map: &Input) -> Output {
-    let mut antinodes = HashSet::with_capacity((map.size() / 2) as usize);
+    let mut antinodes =
+        HashSet::with_capacity_and_hasher((map.size() / 2) as usize, FxBuildHasher::default());
     for points in map.towers.values() {
         for (i, first) in points.iter().enumerate() {
             for second in &points[i + 1..] {

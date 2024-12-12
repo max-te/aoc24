@@ -1,5 +1,5 @@
 use aoc_runner_derive::{aoc, aoc_generator};
-use std::collections::HashSet;
+use rustc_hash::{FxBuildHasher, FxHashSet};
 use std::hash::{Hash, Hasher};
 
 type Output = usize;
@@ -58,13 +58,14 @@ impl Hash for Guard {
     }
 }
 
-type NaiveInput = (HashSet<Point>, Guard, Coord, Coord);
+type NaiveInput = (FxHashSet<Point>, Guard, Coord, Coord);
 
 #[aoc_generator(day6, naive)]
 fn parse_naive(puzzle: &str) -> NaiveInput {
     let puzzle = puzzle.as_bytes();
     let mut point = Point(1, 1);
-    let mut obstacles = HashSet::with_capacity(puzzle.len() / 10);
+    let mut obstacles =
+        FxHashSet::with_capacity_and_hasher(puzzle.len() / 10, FxBuildHasher::default());
     let mut guard = None;
     let mut width = None;
     for ch in puzzle {
@@ -102,7 +103,10 @@ fn parse_naive(puzzle: &str) -> NaiveInput {
 #[aoc(day6, part1, naive)]
 fn one_naive((obstacles, guard, width, height): &NaiveInput) -> Output {
     let mut guard = *guard;
-    let mut visited = HashSet::with_capacity(*width as usize * *height as usize / 10);
+    let mut visited = FxHashSet::with_capacity_and_hasher(
+        *width as usize * *height as usize / 10,
+        FxBuildHasher::default(),
+    );
     while guard.0.in_range(*width, *height) {
         visited.insert(guard.0.clone());
         loop {
@@ -123,12 +127,15 @@ pub fn part1(puzzle: &str) -> Output {
 }
 
 fn trace_base_path(
-    obstacles: &HashSet<Point>,
+    obstacles: &FxHashSet<Point>,
     mut guard: Guard,
     width: Coord,
     height: Coord,
-) -> HashSet<Guard> {
-    let mut path = HashSet::with_capacity(width as usize * height as usize);
+) -> FxHashSet<Guard> {
+    let mut path = FxHashSet::with_capacity_and_hasher(
+        width as usize * height as usize,
+        FxBuildHasher::default(),
+    );
     while guard.0.in_range(width, height) {
         path.insert(guard);
         loop {
@@ -198,7 +205,7 @@ impl EdgeMap {
             .is_ok()
     }
 
-    fn from_obstacles(obstacles: &HashSet<Point>, width: Coord, height: Coord) -> Self {
+    fn from_obstacles(obstacles: &FxHashSet<Point>, width: Coord, height: Coord) -> Self {
         let mut slf = Self::with_size(width, height);
         for point in obstacles {
             unsafe {
@@ -256,7 +263,8 @@ impl EdgeMap {
 fn two_cast((obstacles, guard, width, height): &NaiveInput) -> Output {
     let base_path = trace_base_path(&obstacles, *guard, *width, *height);
     let mut edge_map = EdgeMap::from_obstacles(&obstacles, *width, *height);
-    let mut blockable = HashSet::with_capacity(base_path.len());
+    let mut blockable =
+        FxHashSet::with_capacity_and_hasher(base_path.len(), FxBuildHasher::default());
     for next in base_path.iter() {
         if next.0 == guard.0 {
             continue;
@@ -272,7 +280,10 @@ fn two_cast((obstacles, guard, width, height): &NaiveInput) -> Output {
 
 #[inline(always)]
 fn cast_loop(edge_map: &EdgeMap, mut guard: Guard, width: Coord, height: Coord) -> bool {
-    let mut path = HashSet::with_capacity(width as usize * height as usize / 100);
+    let mut path = FxHashSet::with_capacity_and_hasher(
+        width as usize * height as usize / 100,
+        FxBuildHasher::default(),
+    );
     while guard.0.in_range(width, height) {
         if !path.insert(guard) {
             return true;
@@ -294,7 +305,10 @@ fn cast_loop(edge_map: &EdgeMap, mut guard: Guard, width: Coord, height: Coord) 
 fn one_cast((obstacles, guard, width, height): &NaiveInput) -> Output {
     let edge_map = EdgeMap::from_obstacles(&obstacles, *width, *height);
     let mut guard = *guard;
-    let mut visited = HashSet::with_capacity(*width as usize * *height as usize / 10);
+    let mut visited = FxHashSet::with_capacity_and_hasher(
+        *width as usize * *height as usize / 10,
+        FxBuildHasher::default(),
+    );
     loop {
         let Some(cast_pos) = edge_map.cast(guard) else {
             while guard.0.in_range(*width, *height) {

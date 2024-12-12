@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 use aoc_runner_derive::{aoc, aoc_generator};
 
@@ -35,14 +35,14 @@ fn _blink(stone: Num, times: u8) -> Output {
 #[aoc(day11, part1)]
 fn one(stones: &Input) -> Output {
     let mut answer = 0;
-    let mut memo = HashMap::new();
+    let mut memo = FxHashMap::default();
     for stone in stones {
         answer += blink_memo(*stone, 25, &mut memo);
     }
     answer
 }
 
-fn blink_memo(stone: Num, times: u8, memory: &mut HashMap<(Num, u8), Output>) -> Output {
+fn blink_memo(stone: Num, times: u8, memory: &mut FxHashMap<(Num, u8), Output>) -> Output {
     let key = (stone, times);
     if let Some(res) = memory.get(&key) {
         return *res;
@@ -68,7 +68,7 @@ fn blink_memo(stone: Num, times: u8, memory: &mut HashMap<(Num, u8), Output>) ->
 #[aoc(day11, part2)]
 fn two(stones: &Input) -> Output {
     let mut answer = 0;
-    let mut memo = HashMap::new();
+    let mut memo = FxHashMap::default();
     for stone in stones {
         answer += blink_memo(*stone, 75, &mut memo);
     }

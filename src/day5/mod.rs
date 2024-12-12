@@ -1,17 +1,17 @@
 use aoc_runner_derive::{aoc, aoc_generator};
+use rustc_hash::FxHashSet;
 use std::cmp::Ordering;
-use std::collections::HashSet;
 
 use crate::util::{parse_2_digits, VecVec};
 
 type Output = u32;
 type PageNum = u8;
-type Input = (HashSet<(PageNum, PageNum)>, VecVec<PageNum>);
+type Input = (FxHashSet<(PageNum, PageNum)>, VecVec<PageNum>);
 
 #[aoc_generator(day5)]
 fn parse(puzzle: &str) -> Input {
     let puzzle = puzzle.as_bytes();
-    let mut rules = HashSet::new();
+    let mut rules = FxHashSet::default();
     let mut cursor = 0;
     while puzzle[cursor] != b'\n' {
         let line = &puzzle[cursor..];
@@ -41,7 +41,7 @@ fn part_one((rules, updates): &Input) -> Output {
         .sum()
 }
 
-fn is_legal(update: &[PageNum], rules: &HashSet<(PageNum, PageNum)>) -> bool {
+fn is_legal(update: &[PageNum], rules: &FxHashSet<(PageNum, PageNum)>) -> bool {
     for i in 0..update.len() - 1 {
         let page = update[i];
         // Assumption (info from part 2): rules specify a total or cyclic order, so we just need to check the next one
