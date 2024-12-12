@@ -31,7 +31,7 @@ impl Grid2D {
     }
 
     #[inline]
-    fn east_of(&self, x: usize, y: usize) -> Option<Plant> {
+    fn west_of(&self, x: usize, y: usize) -> Option<Plant> {
         if x <= 0 {
             None
         } else {
@@ -45,6 +45,15 @@ impl Grid2D {
             None
         } else {
             Some(self.get(x, y - 1))
+        }
+    }
+
+    #[inline]
+    fn northwest_of(&self, x: usize, y: usize) -> Option<Plant> {
+        if x <= 0 || y <= 0 {
+            None
+        } else {
+            Some(self.get(x - 1, y - 1))
         }
     }
 }
@@ -98,19 +107,19 @@ fn one(plots: &Input) -> Output {
         for x in 0..plots.width {
             let this_plant = plots.get(x, y);
             let north_plant = plots.north_of(x, y);
-            let east_plant = plots.east_of(x, y);
+            let west_plant = plots.west_of(x, y);
             if north_plant == Some(this_plant) {
                 let mut north_region_id = previous_row[x];
                 while let Region::Merged { into, .. } = regions[north_region_id] {
                     north_region_id = into;
                 }
 
-                if east_plant == Some(this_plant) {
-                    let east_region_id = current_row[x - 1];
-                    current_row.push(east_region_id);
-                    if east_region_id == north_region_id {
-                        let east_region = &mut regions[east_region_id];
-                        match east_region {
+                if west_plant == Some(this_plant) {
+                    let west_region_id = current_row[x - 1];
+                    current_row.push(west_region_id);
+                    if west_region_id == north_region_id {
+                        let west_region = &mut regions[west_region_id];
+                        match west_region {
                             Region::Active { area, .. } => {
                                 *area += 1;
                                 // perimeter unchanged
@@ -118,13 +127,13 @@ fn one(plots: &Input) -> Output {
                             Region::Merged { .. } => unreachable!(),
                         }
                     } else {
-                        let (east_region, north_region) =
-                            get_two_mut(&mut regions, east_region_id, north_region_id);
-                        match (east_region, &north_region) {
+                        let (west_region, north_region) =
+                            get_two_mut(&mut regions, west_region_id, north_region_id);
+                        match (west_region, &north_region) {
                             (
                                 Region::Active {
-                                    area: east_area,
-                                    perimeter: east_perimeter,
+                                    area: west_area,
+                                    perimeter: west_perimeter,
                                     ..
                                 },
                                 Region::Active {
@@ -133,14 +142,14 @@ fn one(plots: &Input) -> Output {
                                     ..
                                 },
                             ) => {
-                                *east_area += *north_area + 1;
-                                *east_perimeter += *north_perimeter;
+                                *west_area += *north_area + 1;
+                                *west_perimeter += *north_perimeter;
                             }
                             _ => unreachable!(),
                         }
                         *north_region = Region::Merged {
                             id: north_region_id,
-                            into: east_region_id,
+                            into: west_region_id,
                             plant: this_plant,
                         };
                     }
@@ -157,11 +166,11 @@ fn one(plots: &Input) -> Output {
                         Region::Merged { .. } => unreachable!(),
                     }
                 }
-            } else if x > 0 && east_plant == Some(this_plant) {
-                let east_region_id = current_row[x - 1];
-                current_row.push(east_region_id);
-                let east_region = &mut regions[east_region_id];
-                match east_region {
+            } else if x > 0 && west_plant == Some(this_plant) {
+                let west_region_id = current_row[x - 1];
+                current_row.push(west_region_id);
+                let west_region = &mut regions[west_region_id];
+                match west_region {
                     Region::Active {
                         area, perimeter, ..
                     } => {
@@ -219,7 +228,91 @@ fn one(plots: &Input) -> Output {
 
 #[aoc(day12, part2)]
 fn two(plots: &Input) -> Output {
-    todo!()
+    let mut regions: Vec<Region> = Vec::new();
+
+    let mut previous_row: Vec<RegionId> = Vec::with_capacity(plots.width);
+    for y in 0..plots.height {
+        let mut current_row = Vec::with_capacity(plots.width);
+        for x in 0..plots.width {
+            if x > 0 && y > 0 {
+                let this_plant = plots.get(x, y);
+                let north_plant = plots.north_of(x, y).unwrap();
+                let west_plant = plots.west_of(x, y).unwrap();
+                let northwest_plant = plots.northwest_of(x, y).unwrap();
+
+                match (north_plant == this_plant, northwest_plant == this_plant, west_plant == this_plant) {
+                    (false, _, false) => {
+                        // yx
+                        // zT
+                        // This is a northwest corner, open a new region
+                    },
+                    (true, true, true) => {
+                        // TT
+                        // TT
+                        // This is an inner point, continue region
+                    },
+                    (true, false, false) => {
+                        // yT
+                        // xT
+                        // This is a west edge, continue northern region
+                    },
+                    (true, true, false) => {
+                        // TT
+                        // xT
+                        // This is an inner northwest corner, continue northern region
+                    },
+                    (false, false, true) => {
+                        // yx
+                        // TT
+                        // This is a north edge, continue western region
+                    },
+                    (true, false, true) => {
+                        // yT
+                        // TT
+                        // This is an inner southwest corner, merge northern region into western region and continue
+                    },
+                    (false, true, true) => {
+                        // TT
+                        // xT
+                        // This is an inner southwest corner, continue western region
+                    }
+                }
+            }
+
+            
+        }
+        previous_row = current_row;
+    }
+
+    #[cfg(debug_assertions)]
+    {
+        dbg!(&regions, plots.height, plots.width);
+    }
+
+    regions
+        .iter()
+        .map(|region| match region {
+            Region::Active {
+                id,
+                plant,
+                area,
+                perimeter,
+                ..
+            } => {
+                #[cfg(debug_assertions)]
+                eprintln!(
+                    "Region {id} of {} plants with price {} * {} = {}",
+                    char::from_u32(*plant as u32).unwrap(),
+                    area,
+                    perimeter * 2,
+                    area * 2 * perimeter
+                );
+                *area * 2 * *perimeter
+            }
+            Region::Merged { .. } => 0,
+        })
+        .sum()
+
 }
 
 pub fn part1(puzzle: &str) -> Output {
@@ -252,9 +345,33 @@ mod examples {
         assert_eq!(res, 140);
     }
 
-    // #[test]
-    // fn example2() {
-    //     let res = two(&parse(include_str!("test.txt")));
-    //     assert_eq!(res, 81);
-    // }
+    #[test]
+    fn example2_small() {
+        let res = two(&parse(include_str!("test_small.txt")));
+        assert_eq!(res, 80);
+    }
+
+    #[test]
+    fn example2_medium() {
+        let res = two(&parse(include_str!("test_medium.txt")));
+        assert_eq!(res, 436);
+    }
+
+    #[test]
+    fn example2_e() {
+        let res = two(&parse(include_str!("test_e.txt")));
+        assert_eq!(res, 236);
+    }
+
+    #[test]
+    fn example2_abba() {
+        let res = two(&parse(include_str!("test_abba.txt")));
+        assert_eq!(res, 368);
+    }
+
+    #[test]
+    fn example2() {
+        let res = two(&parse(include_str!("test.txt")));
+        assert_eq!(res, 1206);
+    }
 }
