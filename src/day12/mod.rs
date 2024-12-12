@@ -1,5 +1,3 @@
-use std::{char, collections::HashMap, num::NonZeroUsize, ops::IndexMut, usize};
-
 use aoc_runner_derive::{aoc, aoc_generator};
 
 type Output = usize;
@@ -70,15 +68,20 @@ type RegionId = usize;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Region {
     Active {
-        id: RegionId,
+        #[cfg(debug_assertions)]
+        _id: RegionId,
         area: usize,
+        /// For part 2 this represents the number of corners / sides
         perimeter: usize,
-        plant: Plant,
+        #[cfg(debug_assertions)]
+        _plant: Plant,
     },
     Merged {
-        id: RegionId,
+        #[cfg(debug_assertions)]
+        _id: RegionId,
         into: usize,
-        plant: Plant,
+        #[cfg(debug_assertions)]
+        _plant: Plant,
     },
 }
 
@@ -148,9 +151,11 @@ fn one(plots: &Input) -> Output {
                             _ => unreachable!(),
                         }
                         *north_region = Region::Merged {
-                            id: north_region_id,
+                            #[cfg(debug_assertions)]
+                            _id: north_region_id,
                             into: west_region_id,
-                            plant: this_plant,
+                            #[cfg(debug_assertions)]
+                            _plant: this_plant,
                         };
                     }
                 } else {
@@ -182,10 +187,12 @@ fn one(plots: &Input) -> Output {
             } else {
                 let new_region_id = regions.len();
                 regions.push(Region::Active {
-                    id: new_region_id,
+                    #[cfg(debug_assertions)]
+                    _id: new_region_id,
                     area: 1,
                     perimeter: 2,
-                    plant: this_plant,
+                    #[cfg(debug_assertions)]
+                    _plant: this_plant,
                 });
                 current_row.push(new_region_id);
             }
@@ -205,16 +212,18 @@ fn one(plots: &Input) -> Output {
         .iter()
         .map(|region| match region {
             Region::Active {
-                id,
-                plant,
+                #[cfg(debug_assertions)]
+                _id,
+                #[cfg(debug_assertions)]
+                _plant,
                 area,
                 perimeter,
                 ..
             } => {
                 #[cfg(debug_assertions)]
                 eprintln!(
-                    "Region {id} of {} plants with price {} * {} = {}",
-                    char::from_u32(*plant as u32).unwrap(),
+                    "Region {_id} of {} plants with price {} * {} = {}",
+                    char::from_u32(*_plant as u32).unwrap(),
                     area,
                     perimeter * 2,
                     area * 2 * perimeter
@@ -226,6 +235,37 @@ fn one(plots: &Input) -> Output {
         .sum()
 }
 
+fn increment_region(
+    regions: &mut Vec<Region>,
+    region_id: RegionId,
+    area_change: usize,
+    perimeter_change: usize,
+) {
+    // let region_id = resolve_id(regions, region_id);
+    let region = &mut regions[region_id];
+    // eprintln!("{region_id}: a+{}, p+{}", area_change, perimeter_change);
+    match region {
+        Region::Active {
+            area, perimeter, ..
+        } => {
+            *area += area_change;
+            *perimeter += perimeter_change;
+        }
+        Region::Merged { .. } => panic!(
+            "Can't increment merged region {region_id} {:?}",
+            &regions[region_id]
+        ),
+    }
+}
+
+fn resolve_id(regions: &mut Vec<Region>, id1: RegionId) -> RegionId {
+    let mut id = id1;
+    while let Region::Merged { into, .. } = regions[id] {
+        id = into;
+    }
+    id
+}
+
 #[aoc(day12, part2)]
 fn two(plots: &Input) -> Output {
     let mut regions: Vec<Region> = Vec::new();
@@ -234,85 +274,255 @@ fn two(plots: &Input) -> Output {
     for y in 0..plots.height {
         let mut current_row = Vec::with_capacity(plots.width);
         for x in 0..plots.width {
+            let this_plant = plots.get(x, y);
             if x > 0 && y > 0 {
-                let this_plant = plots.get(x, y);
                 let north_plant = plots.north_of(x, y).unwrap();
                 let west_plant = plots.west_of(x, y).unwrap();
                 let northwest_plant = plots.northwest_of(x, y).unwrap();
+                let western_region_id = resolve_id(&mut regions, current_row[x - 1]); // Should not be necessary
+                let northern_region_id = resolve_id(&mut regions, previous_row[x]);
+                let northwestern_region_id = resolve_id(&mut regions, previous_row[x - 1]);
 
-                match (north_plant == this_plant, northwest_plant == this_plant, west_plant == this_plant) {
+                // eprintln!("({x}, {y}) NW={northwestern_region_id:2} N={northern_region_id:2} W={western_region_id:2}");
+                // eprintln!("{}{}\n{}{}", char::from_u32(northwest_plant as u32).unwrap(), char::from_u32(north_plant as u32).unwrap(), char::from_u32(west_plant as u32).unwrap(), char::from_u32(this_plant as u32).unwrap());
+
+                match (
+                    north_plant == this_plant,
+                    northwest_plant == this_plant,
+                    west_plant == this_plant,
+                ) {
                     (false, _, false) => {
+                        // eprintln!("Case 1");
                         // yx
                         // zT
                         // This is a northwest corner, open a new region
-                    },
+                        let new_region_id = regions.len();
+                        regions.push(Region::Active {
+                            #[cfg(debug_assertions)]
+                            _id: new_region_id,
+                            area: 1,
+                            perimeter: 1,
+                            #[cfg(debug_assertions)]
+                            _plant: this_plant,
+                        });
+                        current_row.push(new_region_id);
+
+                        if northwestern_region_id == northern_region_id
+                            && western_region_id == northwestern_region_id
+                        {
+                            increment_region(&mut regions, northwestern_region_id, 0, 1);
+                        } else if northwestern_region_id == northern_region_id {
+                            increment_region(&mut regions, western_region_id, 0, 1);
+                        } else if northwestern_region_id == western_region_id {
+                            increment_region(&mut regions, northern_region_id, 0, 1);
+                        } else {
+                            increment_region(&mut regions, northern_region_id, 0, 1);
+                            increment_region(&mut regions, northwestern_region_id, 0, 1);
+                            increment_region(&mut regions, western_region_id, 0, 1);
+                        }
+                    }
                     (true, true, true) => {
+                        // eprintln!("Case 2");
                         // TT
                         // TT
                         // This is an inner point, continue region
-                    },
+                        current_row.push(western_region_id);
+                        increment_region(&mut regions, western_region_id, 1, 0);
+                    }
                     (true, false, false) => {
+                        // eprintln!("Case 3");
                         // yT
                         // xT
                         // This is a west edge, continue northern region
-                    },
-                    (true, true, false) => {
-                        // TT
-                        // xT
-                        // This is an inner northwest corner, continue northern region
-                    },
+                        current_row.push(northern_region_id);
+                        increment_region(&mut regions, northern_region_id, 1, 0);
+
+                        if western_region_id != northwestern_region_id {
+                            increment_region(&mut regions, western_region_id, 0, 1);
+                            increment_region(&mut regions, northwestern_region_id, 0, 1);
+                        }
+                    }
                     (false, false, true) => {
+                        // eprintln!("Case 4");
                         // yx
                         // TT
                         // This is a north edge, continue western region
-                    },
+                        current_row.push(western_region_id);
+                        increment_region(&mut regions, western_region_id, 1, 0);
+
+                        if northern_region_id != northwestern_region_id {
+                            increment_region(&mut regions, northern_region_id, 0, 1);
+                            increment_region(&mut regions, northwestern_region_id, 0, 1);
+                        }
+                    }
+                    (true, true, false) => {
+                        // eprintln!("Case 5");
+                        // TT
+                        // xT
+                        // This is an inner northwest corner, continue northern region
+                        current_row.push(northern_region_id);
+                        increment_region(&mut regions, northern_region_id, 1, 1);
+                        increment_region(&mut regions, western_region_id, 0, 1);
+                    }
+                    (false, true, true) => {
+                        // eprintln!("Case 6");
+                        // Tx
+                        // TT
+                        // This is an inner southwest corner, continue western region
+                        current_row.push(western_region_id);
+                        increment_region(&mut regions, western_region_id, 1, 1);
+                        increment_region(&mut regions, northern_region_id, 0, 1);
+                    }
                     (true, false, true) => {
+                        // eprintln!("Case 7");
                         // yT
                         // TT
                         // This is an inner southwest corner, merge northern region into western region and continue
-                    },
-                    (false, true, true) => {
-                        // TT
-                        // xT
-                        // This is an inner southwest corner, continue western region
+                        current_row.push(western_region_id);
+                        increment_region(&mut regions, western_region_id, 1, 1);
+
+                        if northern_region_id != western_region_id {
+                            let (northern_area, northern_perimeter) =
+                                match &regions[northern_region_id] {
+                                    Region::Active {
+                                        area, perimeter, ..
+                                    } => (*area, *perimeter),
+                                    Region::Merged { .. } => unreachable!(),
+                                };
+                            increment_region(
+                                &mut regions,
+                                western_region_id,
+                                northern_area,
+                                northern_perimeter,
+                            );
+                            regions[northern_region_id] = Region::Merged {
+                                #[cfg(debug_assertions)]
+                                _id: northern_region_id,
+                                into: western_region_id,
+                                #[cfg(debug_assertions)]
+                                _plant: this_plant,
+                            };
+                        }
+
+                        increment_region(&mut regions, northwestern_region_id, 0, 1);
                     }
+                }
+            } else if y == 0 && x == 0 {
+                // Northwest corner
+                let new_region_id = regions.len();
+                regions.push(Region::Active {
+                    #[cfg(debug_assertions)]
+                    _id: new_region_id,
+                    area: 1,
+                    perimeter: 1,
+                    #[cfg(debug_assertions)]
+                    _plant: this_plant,
+                });
+                current_row.push(new_region_id);
+            } else if y == 0 {
+                // North edge
+                let west_plant = plots.west_of(x, y).unwrap();
+                let western_region_id = current_row[x - 1];
+                if west_plant == this_plant {
+                    current_row.push(current_row[x - 1]);
+                    increment_region(&mut regions, western_region_id, 1, 0);
+                } else {
+                    let new_region_id = regions.len();
+                    regions.push(Region::Active {
+                        #[cfg(debug_assertions)]
+                        _id: new_region_id,
+                        area: 1,
+                        perimeter: 1,
+                        #[cfg(debug_assertions)]
+                        _plant: this_plant,
+                    });
+                    current_row.push(new_region_id);
+
+                    increment_region(&mut regions, western_region_id, 0, 1);
+                }
+            } else if x == 0 {
+                // West edge
+                let north_plant = plots.north_of(x, y).unwrap();
+                let northern_region_id = resolve_id(&mut regions, previous_row[x]);
+                if north_plant == this_plant {
+                    current_row.push(northern_region_id);
+                    increment_region(&mut regions, northern_region_id, 1, 0);
+                } else {
+                    let new_region_id = regions.len();
+                    regions.push(Region::Active {
+                        #[cfg(debug_assertions)]
+                        _id: new_region_id,
+                        area: 1,
+                        perimeter: 1,
+                        #[cfg(debug_assertions)]
+                        _plant: this_plant,
+                    });
+                    current_row.push(new_region_id);
+
+                    increment_region(&mut regions, northern_region_id, 0, 1);
                 }
             }
 
-            
+            // East corners on eastern edge
+            if x == plots.width - 1 {
+                // eprintln!("East edge ({x}, {y})");
+                let region_id = current_row[x];
+                if y == 0 {
+                    increment_region(&mut regions, region_id, 0, 1);
+                } else {
+                    let north_region_id = resolve_id(&mut regions, previous_row[x]);
+                    if region_id != north_region_id {
+                        increment_region(&mut regions, region_id, 0, 1);
+                        increment_region(&mut regions, north_region_id, 0, 1);
+                    }
+                }
+            }
+            // South corners on southern edge
+            if y == plots.height - 1 {
+                // eprintln!("South edge ({x}, {y})");
+                let region_id = current_row[x];
+                if x == 0 || x == plots.width - 1 {
+                    increment_region(&mut regions, region_id, 0, 1);
+                }
+                if x > 0 && region_id != current_row[x - 1] {
+                    increment_region(&mut regions, region_id, 0, 1);
+                    increment_region(&mut regions, current_row[x - 1], 0, 1);
+                }
+            }
         }
         previous_row = current_row;
     }
 
-    #[cfg(debug_assertions)]
-    {
-        dbg!(&regions, plots.height, plots.width);
-    }
+    // #[cfg(debug_assertions)]
+    // {
+    //     dbg!(&regions, plots.height, plots.width);
+    // }
 
     regions
         .iter()
         .map(|region| match region {
             Region::Active {
-                id,
-                plant,
+                #[cfg(debug_assertions)]
+                _id,
+                #[cfg(debug_assertions)]
+                _plant,
                 area,
                 perimeter,
                 ..
             } => {
                 #[cfg(debug_assertions)]
                 eprintln!(
-                    "Region {id} of {} plants with price {} * {} = {}",
-                    char::from_u32(*plant as u32).unwrap(),
+                    "Region {_id} of {} plants with price {} * {} = {}",
+                    char::from_u32(*_plant as u32).unwrap(),
                     area,
-                    perimeter * 2,
-                    area * 2 * perimeter
+                    perimeter,
+                    area * perimeter
                 );
-                *area * 2 * *perimeter
+                *area * *perimeter
             }
             Region::Merged { .. } => 0,
         })
         .sum()
-
 }
 
 pub fn part1(puzzle: &str) -> Output {
