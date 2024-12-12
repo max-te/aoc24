@@ -1,4 +1,4 @@
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxBuildHasher, FxHashMap};
 
 use aoc_runner_derive::{aoc, aoc_generator};
 
@@ -65,14 +65,47 @@ fn blink_memo(stone: Num, times: u8, memory: &mut FxHashMap<(Num, u8), Output>) 
     res
 }
 
-#[aoc(day11, part2)]
-fn two(stones: &Input) -> Output {
+#[aoc(day11, part2, memoized_recursive)]
+fn two_memo(stones: &Input) -> Output {
     let mut answer = 0;
     let mut memo = FxHashMap::default();
     for stone in stones {
         answer += blink_memo(*stone, 75, &mut memo);
     }
     answer
+}
+
+#[aoc(day11, part2, counter)]
+fn two(stones: &Input) -> Output {
+    let mut stone_counts =
+        FxHashMap::with_capacity_and_hasher(stones.len(), FxBuildHasher::default());
+    for &stone in stones {
+        *stone_counts.entry(stone).or_default() += 1;
+    }
+    for _ in 0..75 {
+        stone_counts = blink_all_once(&stone_counts);
+    }
+    stone_counts.values().sum()
+}
+
+fn blink_all_once(stones: &FxHashMap<Num, usize>) -> FxHashMap<Num, usize> {
+    let mut new_stones =
+        FxHashMap::with_capacity_and_hasher(stones.len() * 2, FxBuildHasher::default());
+    for (&stone, &count) in stones {
+        let digits = stone.checked_ilog10().unwrap_or_default() + 1;
+        if stone == 0 {
+            *new_stones.entry(1).or_default() += count;
+        } else if digits % 2 == 0 {
+            let split = (10 as Num).pow(digits / 2);
+            let first_half = stone / split;
+            let second_half = stone % split;
+            *new_stones.entry(first_half).or_default() += count;
+            *new_stones.entry(second_half).or_default() += count;
+        } else {
+            *new_stones.entry(stone * 2024).or_default() += count;
+        }
+    }
+    new_stones
 }
 
 pub fn part1(puzzle: &str) -> Output {
@@ -93,9 +126,9 @@ mod examples {
         assert_eq!(res, 55312);
     }
 
-    // #[test]
-    // fn example2() {
-    //     let res = two(&parse(include_str!("test.txt")));
-    //     assert_eq!(res, 81);
-    // }
+    #[test]
+    fn example2() {
+        let res = two(&parse(include_str!("test.txt")));
+        assert_eq!(res, 65601038650482);
+    }
 }
