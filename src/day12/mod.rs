@@ -279,7 +279,7 @@ fn two(plots: &Input) -> Output {
                 let north_plant = plots.north_of(x, y).unwrap();
                 let west_plant = plots.west_of(x, y).unwrap();
                 let northwest_plant = plots.northwest_of(x, y).unwrap();
-                let western_region_id = resolve_id(&mut regions, current_row[x - 1]); // Should not be necessary
+                let western_region_id = current_row[x - 1];
                 let northern_region_id = resolve_id(&mut regions, previous_row[x]);
                 let northwestern_region_id = resolve_id(&mut regions, previous_row[x - 1]);
 
