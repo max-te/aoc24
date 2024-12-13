@@ -1,5 +1,8 @@
+use core::str;
+
 use aoc_runner_derive::{aoc, aoc_generator};
-use itertools::Itertools;
+
+use crate::util::parse_digits_unchecked;
 
 type Num = i64;
 #[derive(Debug, Clone, Copy)]
@@ -15,37 +18,41 @@ struct ClawMachine {
 type Input = Vec<ClawMachine>;
 type Output = usize;
 
+const BUTTON_X_LEN: usize = "Button _: X+".len();
+const PRIZE_LEN: usize = "Prize: X=".len();
+
 #[aoc_generator(day13)]
 fn parse(input: &str) -> Input {
-    let mut machines = Vec::new();
-    for mut chunk in &input.lines().chunks(4) {
-        let (button_a_1, button_a_2) = chunk
-            .next()
-            .unwrap()
-            .strip_prefix("Button A: X+")
-            .unwrap()
-            .split_once(", Y+")
-            .unwrap();
-        let a_x: Num = button_a_1.parse().unwrap();
-        let a_y: Num = button_a_2.parse().unwrap();
-        let (button_b_1, button_b_2) = chunk
-            .next()
-            .unwrap()
-            .strip_prefix("Button B: X+")
-            .unwrap()
-            .split_once(", Y+")
-            .unwrap();
-        let b_x: Num = button_b_1.parse().unwrap();
-        let b_y: Num = button_b_2.parse().unwrap();
-        let (target_1, target_2) = chunk
-            .next()
-            .unwrap()
-            .strip_prefix("Prize: X=")
-            .unwrap()
-            .split_once(", Y=")
-            .unwrap();
-        let target_x: Num = target_1.parse().unwrap();
-        let target_y: Num = target_2.parse().unwrap();
+    let mut input = input.as_bytes();
+    let mut machines = Vec::with_capacity(input.len() / 64);
+    while !input.is_empty() {
+        input = &input[BUTTON_X_LEN..];
+        let num_len = input.iter().position(|&x| x == b',').unwrap();
+        let a_x = parse_digits_unchecked(&input[..num_len]) as Num;
+        input = &input[num_len + 4..];
+        let num_len = input.iter().position(|&x| x == b'\n').unwrap();
+        let a_y = parse_digits_unchecked(&input[..num_len]) as Num;
+        input = &input[num_len + 1..];
+
+        input = &input[BUTTON_X_LEN..];
+        let num_len = input.iter().position(|&x| x == b',').unwrap();
+        let b_x = parse_digits_unchecked(&input[..num_len]) as Num;
+        input = &input[num_len + 4..];
+        let num_len = input.iter().position(|&x| x == b'\n').unwrap();
+        let b_y = parse_digits_unchecked(&input[..num_len]) as Num;
+        input = &input[num_len + 1..];
+
+        input = &input[PRIZE_LEN..];
+        let num_len = input.iter().position(|&x| x == b',').unwrap();
+        let target_x = parse_digits_unchecked(&input[..num_len]) as Num;
+        input = &input[num_len + 4..];
+        let num_len = input
+            .iter()
+            .position(|&x| x == b'\n')
+            .unwrap_or(input.len());
+        let target_y = parse_digits_unchecked(&input[..num_len]) as Num;
+        input = &input[num_len..];
+        input = input.trim_ascii_start();
 
         machines.push(ClawMachine {
             a_x,
@@ -66,8 +73,8 @@ fn solve_linear(m: &ClawMachine) -> Option<(Num, Num)> {
         eprintln!("System {m:?} is degenerate, might still be solvable if input is evil");
         None
     } else {
-        let a = m.target_x * m.b_y - m.target_y * m.b_x;
-        let b = m.target_y * m.a_x - m.target_x * m.a_y;
+        let a = (m.target_x * m.b_y).checked_sub(m.target_y * m.b_x)?;
+        let b = (m.target_y * m.a_x).checked_sub(m.target_x * m.a_y)?;
         if a % det != 0 || b % det != 0 {
             None
         } else {
@@ -83,10 +90,8 @@ fn one(machines: &Input) -> Output {
         let s = solve_linear(machine);
         // dbg!(&machine, &s);
         if let Some((a, b)) = s {
-            if a >= 0 && b >= 0 {
-                // eprintln!("Found solution {a} {b}");
-                tokens += 3 * (a as usize) + (b as usize);
-            }
+            // eprintln!("Found solution {a} {b}");
+            tokens += 3 * (a as usize) + (b as usize);
         }
     }
     tokens

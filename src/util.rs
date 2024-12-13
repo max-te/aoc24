@@ -63,6 +63,23 @@ pub fn parse_digit(digit: &u8) -> u8 {
     digit - '0' as u8
 }
 
+#[inline]
+pub fn parse_digits_unchecked(digits: &[u8]) -> i64 {
+    // TODO: SIMD?
+    // TODO: Generic over output type?
+    let mut res: i64 = 0;
+    for &digit in digits {
+        debug_assert!(
+            digit.is_ascii_digit(),
+            "{:?} is not an ascii digit",
+            char::from_u32(digit as u32)
+        );
+        res *= 10;
+        res += (digit - b'0') as i64;
+    }
+    res
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct MyRange<T>(T, T);
 
