@@ -85,6 +85,16 @@ enum Region {
     },
 }
 
+impl Region {
+    #[cfg(debug_assertions)]
+    fn _plant(&self) -> Plant {
+        match self {
+            Region::Active { _plant, .. } => *_plant,
+            Region::Merged { _plant, .. } => *_plant,
+        }
+    }
+}
+
 fn get_two_mut(
     regions: &mut Vec<Region>,
     id1: RegionId,
@@ -112,78 +122,25 @@ fn one(plots: &Input) -> Output {
             let north_plant = plots.north_of(x, y);
             let west_plant = plots.west_of(x, y);
             if north_plant == Some(this_plant) {
-                let mut north_region_id = previous_row[x];
-                while let Region::Merged { into, .. } = regions[north_region_id] {
-                    north_region_id = into;
-                }
+                let north_region_id = resolve_id(&mut regions, previous_row[x]);
 
                 if west_plant == Some(this_plant) {
                     let west_region_id = current_row[x - 1];
                     current_row.push(west_region_id);
                     if west_region_id == north_region_id {
-                        let west_region = &mut regions[west_region_id];
-                        match west_region {
-                            Region::Active { area, .. } => {
-                                *area += 1;
-                                // perimeter unchanged
-                            }
-                            Region::Merged { .. } => unreachable!(),
-                        }
+                        increment_region(&mut regions, west_region_id, 1, 0);
                     } else {
-                        let (west_region, north_region) =
-                            get_two_mut(&mut regions, west_region_id, north_region_id);
-                        match (west_region, &north_region) {
-                            (
-                                Region::Active {
-                                    area: west_area,
-                                    perimeter: west_perimeter,
-                                    ..
-                                },
-                                Region::Active {
-                                    area: north_area,
-                                    perimeter: north_perimeter,
-                                    ..
-                                },
-                            ) => {
-                                *west_area += *north_area + 1;
-                                *west_perimeter += *north_perimeter;
-                            }
-                            _ => unreachable!(),
-                        }
-                        *north_region = Region::Merged {
-                            #[cfg(debug_assertions)]
-                            _id: north_region_id,
-                            into: west_region_id,
-                            #[cfg(debug_assertions)]
-                            _plant: this_plant,
-                        };
+                        merge_regions(&mut regions, north_region_id, west_region_id);
+                        increment_region(&mut regions, west_region_id, 1, 0);
                     }
                 } else {
                     current_row.push(north_region_id);
-                    let north_region = &mut regions[north_region_id];
-                    match north_region {
-                        Region::Active {
-                            area, perimeter, ..
-                        } => {
-                            *area += 1;
-                            *perimeter += 1; // West
-                        }
-                        Region::Merged { .. } => unreachable!(),
-                    }
+                    increment_region(&mut regions, north_region_id, 1, 1);
                 }
             } else if x > 0 && west_plant == Some(this_plant) {
                 let west_region_id = current_row[x - 1];
                 current_row.push(west_region_id);
-                let west_region = &mut regions[west_region_id];
-                match west_region {
-                    Region::Active {
-                        area, perimeter, ..
-                    } => {
-                        *area += 1;
-                        *perimeter += 1; // North
-                    }
-                    Region::Merged { .. } => unreachable!(),
-                }
+                increment_region(&mut regions, west_region_id, 1, 1);
             } else {
                 let new_region_id = regions.len();
                 regions.push(Region::Active {
@@ -235,6 +192,42 @@ fn one(plots: &Input) -> Output {
         .sum()
 }
 
+#[inline(always)]
+fn merge_regions(regions: &mut Vec<Region>, from_id: RegionId, to_id: RegionId) {
+    let (to_region, from_region) = get_two_mut(regions, to_id, from_id);
+    #[cfg(debug_assertions)]
+    let this_plant = {
+        assert_eq!(from_region._plant(), to_region._plant());
+        from_region._plant()
+    };
+    match (to_region, &from_region) {
+        (
+            Region::Active {
+                area: to_area,
+                perimeter: to_perimeter,
+                ..
+            },
+            Region::Active {
+                area: from_area,
+                perimeter: from_perimeter,
+                ..
+            },
+        ) => {
+            *to_area += *from_area;
+            *to_perimeter += *from_perimeter;
+        }
+        _ => unreachable!(),
+    }
+    *from_region = Region::Merged {
+        #[cfg(debug_assertions)]
+        _id: from_id,
+        into: to_id,
+        #[cfg(debug_assertions)]
+        _plant: this_plant,
+    };
+}
+
+#[inline]
 fn increment_region(
     regions: &mut Vec<Region>,
     region_id: RegionId,
@@ -258,6 +251,7 @@ fn increment_region(
     }
 }
 
+#[inline]
 fn resolve_id(regions: &mut Vec<Region>, id1: RegionId) -> RegionId {
     let mut id = id1;
     while let Region::Merged { into, .. } = regions[id] {
@@ -380,28 +374,8 @@ fn two(plots: &Input) -> Output {
                         // This is an inner southwest corner, merge northern region into western region and continue
                         current_row.push(western_region_id);
                         increment_region(&mut regions, western_region_id, 1, 1);
-
                         if northern_region_id != western_region_id {
-                            let (northern_area, northern_perimeter) =
-                                match &regions[northern_region_id] {
-                                    Region::Active {
-                                        area, perimeter, ..
-                                    } => (*area, *perimeter),
-                                    Region::Merged { .. } => unreachable!(),
-                                };
-                            increment_region(
-                                &mut regions,
-                                western_region_id,
-                                northern_area,
-                                northern_perimeter,
-                            );
-                            regions[northern_region_id] = Region::Merged {
-                                #[cfg(debug_assertions)]
-                                _id: northern_region_id,
-                                into: western_region_id,
-                                #[cfg(debug_assertions)]
-                                _plant: this_plant,
-                            };
+                            merge_regions(&mut regions, northern_region_id, western_region_id);
                         }
 
                         increment_region(&mut regions, northwestern_region_id, 0, 1);
