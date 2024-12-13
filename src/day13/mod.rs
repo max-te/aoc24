@@ -61,12 +61,14 @@ fn parse(input: &str) -> Input {
 }
 
 fn solve_linear(m: &ClawMachine) -> Option<(Num, Num)> {
-    if (m.a_x * m.b_y - m.a_y * m.b_x) == Num::ZERO {
-        eprintln!("System {m:?} is degenerate");
+    let det = m.a_x * m.b_y - m.a_y * m.b_x;
+    if det == Num::ZERO {
+        #[cfg(debug_assertions)]
+        eprintln!("System {m:?} is degenerate, might still be solvable if input is evil");
         None
     } else {
-        let b = (m.target_y / m.a_y - m.target_x / m.a_x) / (m.b_y / m.a_y - m.b_x / m.a_x);
-        let a = m.target_x / m.a_x - b * (m.b_x / m.a_x);
+        let a = (m.target_x * m.b_y - m.target_y * m.b_x) / det;
+        let b = (m.target_y * m.a_x - m.target_x * m.a_y) / det;
         Some((a, b))
     }
 }
