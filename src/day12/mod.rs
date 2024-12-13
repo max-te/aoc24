@@ -142,15 +142,7 @@ fn one(plots: &Input) -> Output {
                 current_row.push(west_region_id);
                 increment_region(&mut regions, west_region_id, 1, 1);
             } else {
-                let new_region_id = regions.len();
-                regions.push(Region::Active {
-                    #[cfg(debug_assertions)]
-                    _id: new_region_id,
-                    area: 1,
-                    perimeter: 2,
-                    #[cfg(debug_assertions)]
-                    _plant: this_plant,
-                });
+                let new_region_id = create_region(&mut regions, 2, this_plant);
                 current_row.push(new_region_id);
             }
             debug_assert!(current_row.len() == x + 1);
@@ -190,6 +182,20 @@ fn one(plots: &Input) -> Output {
             Region::Merged { .. } => 0,
         })
         .sum()
+}
+
+#[inline]
+fn create_region(regions: &mut Vec<Region>, initial_perimeter: usize, plant: Plant) -> RegionId {
+    let new_region_id = regions.len();
+    regions.push(Region::Active {
+        #[cfg(debug_assertions)]
+        _id: new_region_id,
+        area: 1,
+        perimeter: initial_perimeter,
+        #[cfg(debug_assertions)]
+        _plant: plant,
+    });
+    new_region_id
 }
 
 #[inline(always)]
@@ -290,15 +296,7 @@ fn two(plots: &Input) -> Output {
                         // yx
                         // zT
                         // This is a northwest corner, open a new region
-                        let new_region_id = regions.len();
-                        regions.push(Region::Active {
-                            #[cfg(debug_assertions)]
-                            _id: new_region_id,
-                            area: 1,
-                            perimeter: 1,
-                            #[cfg(debug_assertions)]
-                            _plant: this_plant,
-                        });
+                        let new_region_id = create_region(&mut regions, 1, this_plant);
                         current_row.push(new_region_id);
 
                         if northwestern_region_id == northern_region_id
@@ -383,15 +381,7 @@ fn two(plots: &Input) -> Output {
                 }
             } else if y == 0 && x == 0 {
                 // Northwest corner
-                let new_region_id = regions.len();
-                regions.push(Region::Active {
-                    #[cfg(debug_assertions)]
-                    _id: new_region_id,
-                    area: 1,
-                    perimeter: 1,
-                    #[cfg(debug_assertions)]
-                    _plant: this_plant,
-                });
+                let new_region_id = create_region(&mut regions, 1, this_plant);
                 current_row.push(new_region_id);
             } else if y == 0 {
                 // North edge
@@ -401,15 +391,7 @@ fn two(plots: &Input) -> Output {
                     current_row.push(current_row[x - 1]);
                     increment_region(&mut regions, western_region_id, 1, 0);
                 } else {
-                    let new_region_id = regions.len();
-                    regions.push(Region::Active {
-                        #[cfg(debug_assertions)]
-                        _id: new_region_id,
-                        area: 1,
-                        perimeter: 1,
-                        #[cfg(debug_assertions)]
-                        _plant: this_plant,
-                    });
+                    let new_region_id = create_region(&mut regions, 1, this_plant);
                     current_row.push(new_region_id);
 
                     increment_region(&mut regions, western_region_id, 0, 1);
@@ -422,15 +404,7 @@ fn two(plots: &Input) -> Output {
                     current_row.push(northern_region_id);
                     increment_region(&mut regions, northern_region_id, 1, 0);
                 } else {
-                    let new_region_id = regions.len();
-                    regions.push(Region::Active {
-                        #[cfg(debug_assertions)]
-                        _id: new_region_id,
-                        area: 1,
-                        perimeter: 1,
-                        #[cfg(debug_assertions)]
-                        _plant: this_plant,
-                    });
+                    let new_region_id = create_region(&mut regions, 1, this_plant);
                     current_row.push(new_region_id);
 
                     increment_region(&mut regions, northern_region_id, 0, 1);
