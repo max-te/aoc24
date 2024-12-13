@@ -1,8 +1,7 @@
 use aoc_runner_derive::{aoc, aoc_generator};
 use itertools::Itertools;
-use num_rational::Rational64;
 
-type Num = Rational64;
+type Num = i64;
 #[derive(Debug, Clone, Copy)]
 struct ClawMachine {
     a_x: Num,
@@ -62,14 +61,18 @@ fn parse(input: &str) -> Input {
 
 fn solve_linear(m: &ClawMachine) -> Option<(Num, Num)> {
     let det = m.a_x * m.b_y - m.a_y * m.b_x;
-    if det == Num::ZERO {
+    if det == 0 {
         #[cfg(debug_assertions)]
         eprintln!("System {m:?} is degenerate, might still be solvable if input is evil");
         None
     } else {
-        let a = (m.target_x * m.b_y - m.target_y * m.b_x) / det;
-        let b = (m.target_y * m.a_x - m.target_x * m.a_y) / det;
-        Some((a, b))
+        let a = m.target_x * m.b_y - m.target_y * m.b_x;
+        let b = m.target_y * m.a_x - m.target_x * m.a_y;
+        if a % det != 0 || b % det != 0 {
+            None
+        } else {
+            Some((a / det, b / det))
+        }
     }
 }
 
@@ -80,9 +83,9 @@ fn one(machines: &Input) -> Output {
         let s = solve_linear(machine);
         // dbg!(&machine, &s);
         if let Some((a, b)) = s {
-            if a > Num::ZERO && b > Num::ZERO && a.is_integer() && b.is_integer() {
+            if a >= 0 && b >= 0 {
                 // eprintln!("Found solution {a} {b}");
-                tokens += 3 * (*a.numer() as usize) + (*b.numer() as usize);
+                tokens += 3 * (a as usize) + (b as usize);
             }
         }
     }
@@ -91,7 +94,7 @@ fn one(machines: &Input) -> Output {
 
 #[aoc(day13, part2)]
 fn two(machines: &Input) -> Output {
-    let offset: Num = Num::from(10000000000000);
+    let offset: Num = 10000000000000;
     let mut tokens = 0;
     for machine in machines {
         let mut machine = machine.clone();
@@ -100,9 +103,9 @@ fn two(machines: &Input) -> Output {
         let s = solve_linear(&machine);
         // dbg!(&machine, &s);
         if let Some((a, b)) = s {
-            if a > Num::ZERO && b > Num::ZERO && a.is_integer() && b.is_integer() {
+            if a >= 0 && b >= 0 {
                 // eprintln!("Found solution {a} {b}");
-                tokens += 3 * (*a.numer() as usize) + (*b.numer() as usize);
+                tokens += 3 * (a as usize) + (b as usize);
             }
         }
     }
