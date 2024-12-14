@@ -25,7 +25,7 @@ const PRIZE_LEN: usize = "Prize: X=".len();
 fn parse(input: &str) -> Input {
     let mut input = input.as_bytes();
     let mut machines = Vec::with_capacity(input.len() / 64);
-    while !input.is_empty() {
+    loop {
         input = &input[BUTTON_X_LEN..];
         let num_len = input.iter().position(|&x| x == b',').unwrap();
         let a_x = parse_digits_unchecked(&input[..num_len]) as Num;
@@ -52,7 +52,6 @@ fn parse(input: &str) -> Input {
             .unwrap_or(input.len());
         let target_y = parse_digits_unchecked(&input[..num_len]) as Num;
         input = &input[num_len..];
-        input = input.trim_ascii_start();
 
         machines.push(ClawMachine {
             a_x,
@@ -62,6 +61,12 @@ fn parse(input: &str) -> Input {
             target_x,
             target_y,
         });
+
+        if input.len() < 2 {
+            break;
+        } else {
+            input = &input[2..];
+        }
     }
     machines
 }
