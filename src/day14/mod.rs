@@ -1,4 +1,7 @@
+use std::collections::HashSet;
+
 use aoc_runner_derive::{aoc, aoc_generator};
+use rustc_hash::{FxBuildHasher, FxHashSet};
 
 use crate::util::parse_initial_digits;
 
@@ -67,33 +70,20 @@ fn one(robots: &Input) -> Output {
     one_inner(robots, 101, 103)
 }
 
-fn plot_robots(robots: &[Robot], width: Num, height: Num) {
-    for y in 0..height {
-        for x in 0..width {
-            let mut count = 0;
-            for robot in robots {
-                if robot.x == x && robot.y == y {
-                    print!("#");
-                    count += 1;
-                    break;
-                }
-            }
-            if count == 0 {
-                print!(" ");
-            }
-        }
-        println!();
-    }
-}
-
-fn has_frame_at(robots: &[Robot], left_x: Num, top_y: Num, width: Num, height: Num) -> bool {
+fn has_frame_at(
+    positions: &FxHashSet<(usize, usize)>,
+    left_x: usize,
+    top_y: usize,
+    width: usize,
+    height: usize,
+) -> bool {
     for x in left_x..(left_x + width) {
-        if robots.iter().find(|r| r.x == x && r.y == top_y).is_none() {
+        if !positions.contains(&(x, top_y)) {
             return false;
         }
     }
     for y in top_y..(top_y + height) {
-        if robots.iter().find(|r| r.x == left_x && r.y == y).is_none() {
+        if !positions.contains(&(left_x, y)) {
             return false;
         }
     }
@@ -106,13 +96,16 @@ fn two(robots: &Input) -> Output {
     let height = 103;
     let mut robots = robots.to_vec();
 
-    for step in 0..(101 * 103) {
+    for step in 1..(101 * 103) {
+        let mut positions =
+            HashSet::with_capacity_and_hasher(robots.len(), FxBuildHasher::default());
         for robot in &mut robots {
             robot.x = (robot.x + robot.vel_x).rem_euclid(width);
             robot.y = (robot.y + robot.vel_y).rem_euclid(height);
+            positions.insert((robot.x as usize, robot.y as usize));
         }
-        for robot in &robots {
-            if has_frame_at(&robots, robot.x, robot.y, 31, 33) {
+        for (x, y) in &positions {
+            if has_frame_at(&positions, *x, *y, 31, 33) {
                 return step;
             }
         }
