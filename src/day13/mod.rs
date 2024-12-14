@@ -90,8 +90,10 @@ fn one(machines: &Input) -> Output {
         let s = solve_linear(machine);
         // dbg!(&machine, &s);
         if let Some((a, b)) = s {
-            // eprintln!("Found solution {a} {b}");
-            tokens += 3 * (a as usize) + (b as usize);
+            if a >= 0 && b >= 0 {
+                // eprintln!("Found solution {a} {b}");
+                tokens += 3 * (a as usize) + (b as usize);
+            }
         }
     }
     tokens
