@@ -2,7 +2,7 @@ use core::str;
 
 use aoc_runner_derive::{aoc, aoc_generator};
 
-use crate::util::parse_digits_unchecked;
+use crate::util::{parse_digits_unchecked, parse_initial_digits};
 
 type Num = i64;
 #[derive(Debug, Clone, Copy)]
@@ -27,30 +27,21 @@ fn parse(input: &str) -> Input {
     let mut machines = Vec::with_capacity(input.len() / 64);
     loop {
         input = &input[BUTTON_X_LEN..];
-        let num_len = input.iter().position(|&x| x == b',').unwrap();
-        let a_x = parse_digits_unchecked(&input[..num_len]) as Num;
+        let (a_x, num_len) = parse_initial_digits(&input);
         input = &input[num_len + 4..];
-        let num_len = input.iter().position(|&x| x == b'\n').unwrap();
-        let a_y = parse_digits_unchecked(&input[..num_len]) as Num;
+        let (a_y, num_len) = parse_initial_digits(&input);
         input = &input[num_len + 1..];
 
         input = &input[BUTTON_X_LEN..];
-        let num_len = input.iter().position(|&x| x == b',').unwrap();
-        let b_x = parse_digits_unchecked(&input[..num_len]) as Num;
+        let (b_x, num_len) = parse_initial_digits(&input);
         input = &input[num_len + 4..];
-        let num_len = input.iter().position(|&x| x == b'\n').unwrap();
-        let b_y = parse_digits_unchecked(&input[..num_len]) as Num;
+        let (b_y, num_len) = parse_initial_digits(&input);
         input = &input[num_len + 1..];
 
         input = &input[PRIZE_LEN..];
-        let num_len = input.iter().position(|&x| x == b',').unwrap();
-        let target_x = parse_digits_unchecked(&input[..num_len]) as Num;
+        let (target_x, num_len) = parse_initial_digits(&input);
         input = &input[num_len + 4..];
-        let num_len = input
-            .iter()
-            .position(|&x| x == b'\n')
-            .unwrap_or(input.len());
-        let target_y = parse_digits_unchecked(&input[..num_len]) as Num;
+        let (target_y, num_len) = parse_initial_digits(&input);
         input = &input[num_len..];
 
         machines.push(ClawMachine {
