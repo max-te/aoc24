@@ -73,8 +73,8 @@ fn solve_linear(m: &ClawMachine) -> Option<(Num, Num)> {
         eprintln!("System {m:?} is degenerate, might still be solvable if input is evil");
         None
     } else {
-        let a = (m.target_x * m.b_y).checked_sub(m.target_y * m.b_x)?;
-        let b = (m.target_y * m.a_x).checked_sub(m.target_x * m.a_y)?;
+        let a = (m.target_x * m.b_y) - (m.target_y * m.b_x);
+        let b = (m.target_y * m.a_x) - (m.target_x * m.a_y);
         if a % det != 0 || b % det != 0 {
             None
         } else {
