@@ -1,5 +1,6 @@
 use aoc_runner_derive::{aoc, aoc_generator};
 use rustc_hash::{FxBuildHasher, FxHashMap};
+use smallvec::SmallVec;
 use std::{
     collections::BTreeSet,
     hash::{Hash, Hasher},
@@ -271,7 +272,7 @@ fn push_crates(
     step_target: Point,
     facing: Facing,
 ) -> bool {
-    let mut push_front = Vec::new();
+    let mut push_front: SmallVec<[Point; 32]> = SmallVec::new();
     let mut to_push = BTreeSet::new();
     match warehouse.get(&step_target) {
         Some(Object2::Wall) => return false,
