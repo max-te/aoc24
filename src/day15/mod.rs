@@ -1,10 +1,13 @@
 use aoc_runner_derive::{aoc, aoc_generator};
 use rustc_hash::{FxBuildHasher, FxHashMap, FxHashSet};
-use std::hash::{Hash, Hasher};
+use std::{
+    collections::BTreeSet,
+    hash::{Hash, Hasher},
+};
 
 type Output = u32;
 type Coord = u16;
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct Point(Coord, Coord);
 
 impl Point {
@@ -284,7 +287,7 @@ fn push_crates(
     facing: Facing,
 ) -> bool {
     let mut push_front = Vec::with_capacity(8);
-    let mut to_push = Vec::with_capacity(16);
+    let mut to_push = BTreeSet::new();
     match warehouse.get(&step_target) {
         Some(Object2::Wall) => return false,
         None => return true,
@@ -314,20 +317,26 @@ fn push_crates(
                 push_front.push(Facing::West.step(push_target));
             }
         }
-        to_push.push(point);
+        to_push.insert(point);
     }
 
-    let mut pushed = FxHashSet::default();
-    while !to_push.is_empty() {
-        let point = to_push.pop().unwrap();
-        if !pushed.insert(point) {
-            continue;
+    if facing == Facing::South {
+        for &point in to_push.iter().rev() {
+            let push_target = facing.step(point);
+            let from = warehouse.remove(&point).unwrap();
+            warehouse
+                .insert(push_target, from)
+                .inspect(|o| unreachable!("Missed a {o:?} while pushing"));
         }
-        let push_target = facing.step(point);
-        let from = warehouse.remove(&point).unwrap();
-        warehouse
-            .insert(push_target, from)
-            .inspect(|o| unreachable!("Missed an {o:?} while pushing"));
+    } else {
+        debug_assert!(facing == Facing::North);
+        for &point in to_push.iter() {
+            let push_target = facing.step(point);
+            let from = warehouse.remove(&point).unwrap();
+            warehouse
+                .insert(push_target, from)
+                .inspect(|o| unreachable!("Missed a {o:?} while pushing"));
+        }
     }
     true
 }
