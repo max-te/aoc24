@@ -137,12 +137,20 @@ fn two(robots: &Input) -> Output {
         }
         step += 1;
 
-        for x in 0..((WIDTH - 31) as usize) {
-            if col_counts[x] >= 33 && col_counts[x + 30] >= 33 {
-                x_off = Some(step);
+        if x_off.is_none() {
+            for x in 0..((WIDTH - 30) as usize) {
+                if col_counts[x] >= 33 && col_counts[x + 30] >= 33 {
+                    x_off = Some(step);
+                    break;
+                }
             }
-            if row_counts[x] >= 31 && row_counts[x + 32] >= 31 {
-                y_off = Some(step);
+        }
+        if y_off.is_none() {
+            for y in 0..((HEIGHT - 32) as usize) {
+                if row_counts[y] >= 31 && row_counts[y + 32] >= 31 {
+                    y_off = Some(step);
+                    break;
+                }
             }
         }
     }
