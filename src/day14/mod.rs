@@ -113,10 +113,11 @@ fn two_naive(robots: &Input) -> Output {
     panic!("Could not find christmas tree")
 }
 
+const WIDTH: Num = 101;
+const HEIGHT: Num = 103;
+
 #[aoc(day14, part2, chinese_remainder_theorem)]
 fn two(robots: &Input) -> Output {
-    let width = 101;
-    let height = 103;
     let mut robots = robots.to_vec();
 
     let mut x_off = None;
@@ -124,11 +125,11 @@ fn two(robots: &Input) -> Output {
     let mut step = 0;
 
     while x_off.is_none() || y_off.is_none() {
-        let mut col_counts = [0; 101];
-        let mut row_counts = [0; 103];
+        let mut col_counts = [0; WIDTH as usize];
+        let mut row_counts = [0; HEIGHT as usize];
         for robot in &mut robots {
-            robot.x = (robot.x + robot.vel_x).rem_euclid(width);
-            robot.y = (robot.y + robot.vel_y).rem_euclid(height);
+            robot.x = (robot.x + robot.vel_x).rem_euclid(WIDTH);
+            robot.y = (robot.y + robot.vel_y).rem_euclid(HEIGHT);
             let x = robot.x as usize;
             col_counts[x] += 1;
             let y = robot.y as usize;
@@ -136,7 +137,7 @@ fn two(robots: &Input) -> Output {
         }
         step += 1;
 
-        for x in 0..((width - 31) as usize) {
+        for x in 0..((WIDTH - 31) as usize) {
             if col_counts[x] >= 33 && col_counts[x + 30] >= 33 {
                 x_off = Some(step);
             }
@@ -148,21 +149,21 @@ fn two(robots: &Input) -> Output {
     let a = x_off.unwrap();
     let b = y_off.unwrap();
 
-    solve_chinese_remainder(a, width, b, height) as usize
+    solve_chinese_remainder::<WIDTH, HEIGHT>(a, b) as usize
 }
 
-fn solve_chinese_remainder(a: Num, n: Num, b: Num, m: Num) -> Num {
-    let (y, _z, d) = extended_euclidian(n, m);
+fn solve_chinese_remainder<const N: Num, const M: Num>(a: Num, b: Num) -> Num {
+    let (y, _z, d) = const { extended_euclidian(N, M) };
 
-    let ans = a - y * n * (a - b) / d;
-    let ans = ans.rem_euclid(n * m / d);
-    debug_assert_eq!(ans % n, a);
-    debug_assert_eq!(ans % m, b);
+    let ans = a - y * N * (a - b) / d;
+    let ans = ans.rem_euclid(N * M / d);
+    debug_assert_eq!(ans % N, a);
+    debug_assert_eq!(ans % M, b);
     ans
 }
 
 /// returns (x, y, d) such that ax + by = g = gcd(a, b)
-fn extended_euclidian(a: Num, b: Num) -> (Num, Num, Num) {
+const fn extended_euclidian(a: Num, b: Num) -> (Num, Num, Num) {
     let mut s = 0;
     let mut old_s = 1;
     let mut r = b;
@@ -177,7 +178,7 @@ fn extended_euclidian(a: Num, b: Num) -> (Num, Num, Num) {
     } else {
         0
     };
-    debug_assert_eq!(old_r, old_s * a + bezout_t * b);
+    debug_assert!(old_r == old_s * a + bezout_t * b);
 
     (old_s, bezout_t, old_r)
 }
