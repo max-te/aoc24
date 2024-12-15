@@ -1,6 +1,6 @@
 use aoc_runner_derive::{aoc, aoc_generator};
 use itertools::Itertools;
-use rustc_hash::{FxBuildHasher, FxHashMap, FxHashSet};
+use rustc_hash::{FxBuildHasher, FxHashSet};
 use smallvec::SmallVec;
 use std::{
     fmt::Debug,
@@ -122,8 +122,6 @@ fn parse(puzzle: &str) -> Input {
     let mut map = Vec::with_capacity(puzzle.len());
     let mut width = None;
     let mut height = None;
-    let mut warehouse =
-        FxHashMap::with_capacity_and_hasher(puzzle.len() / 2, FxBuildHasher::default());
     let mut point = Point(0, 0);
     let mut wilmot = None;
     let mut moves = Vec::with_capacity(puzzle.len() / 2);
@@ -137,12 +135,10 @@ fn parse(puzzle: &str) -> Input {
             }
             b'#' => {
                 map.push(Some(Object::Wall));
-                warehouse.insert(point.clone(), Object::Wall);
                 height = Some(point.1 + 1);
             }
             b'O' => {
                 map.push(Some(Object::Crate));
-                warehouse.insert(point.clone(), Object::Crate);
             }
             b'@' => {
                 map.push(None);
@@ -236,7 +232,7 @@ enum Object2 {
 
 #[derive(Debug, Clone)]
 struct Input2 {
-    warehouse: FxHashMap<Point, Object2>,
+    warehouse: Map<Option<Object2>>,
     wilmot: Point,
     moves: Vec<Facing>,
 }
@@ -244,33 +240,33 @@ struct Input2 {
 #[aoc_generator(day15, part2)]
 fn parse2(puzzle: &str) -> Input2 {
     let puzzle = puzzle.as_bytes();
-    let mut warehouse = FxHashMap::with_capacity_and_hasher(puzzle.len(), FxBuildHasher::default());
+    let mut map = Vec::with_capacity(puzzle.len());
+    let mut width = None;
+    let mut height = 0;
     let mut point = Point(0, 0);
     let mut wilmot = None;
     let mut moves = Vec::with_capacity(puzzle.len() / 2);
     for ch in puzzle {
         match *ch {
             b'\n' => {
+                width.get_or_insert(point.0);
                 point.1 += 1;
                 point.0 = 0;
                 continue;
             }
             b'#' => {
-                warehouse.insert(point.clone(), Object2::Wall);
-                point.0 += 1;
-                warehouse.insert(point.clone(), Object2::Wall);
+                map.extend_from_slice(&[Some(Object2::Wall), Some(Object2::Wall)]);
+                height = point.1 + 1;
             }
             b'O' => {
-                warehouse.insert(point.clone(), Object2::CrateLeft);
-                point.0 += 1;
-                warehouse.insert(point.clone(), Object2::CrateRight);
+                map.extend_from_slice(&[Some(Object2::CrateLeft), Some(Object2::CrateRight)]);
             }
             b'@' => {
+                map.extend_from_slice(&[None, None]);
                 wilmot = Some(point.clone());
-                point.0 += 1;
             }
             b'.' => {
-                point.0 += 1;
+                map.extend_from_slice(&[None, None]);
             }
             b'^' => moves.push(Facing::North),
             b'v' => moves.push(Facing::South),
@@ -278,10 +274,14 @@ fn parse2(puzzle: &str) -> Input2 {
             b'>' => moves.push(Facing::East),
             _ => unreachable!(),
         }
-        point.0 += 1;
+        point.0 += 2;
     }
     Input2 {
-        warehouse,
+        warehouse: Map {
+            data: map,
+            width: width.unwrap(),
+            height: height,
+        },
         wilmot: wilmot.unwrap(),
         moves,
     }
@@ -314,12 +314,12 @@ fn two(input: &Input2) -> Output {
             Facing::West | Facing::East => {
                 let mut push_end = step_target.clone();
                 while matches!(
-                    warehouse.get(&push_end),
-                    Some(&Object2::CrateLeft) | Some(&Object2::CrateRight)
+                    *warehouse.get(&push_end),
+                    Some(Object2::CrateLeft) | Some(Object2::CrateRight)
                 ) {
                     push_end = facing.step(push_end);
                 }
-                if warehouse.get(&push_end) == Some(&Object2::Wall) {
+                if *warehouse.get(&push_end) == Some(Object2::Wall) {
                     continue;
                 } else if push_end == step_target {
                     wilmot = step_target;
@@ -329,7 +329,7 @@ fn two(input: &Input2) -> Output {
                     let mut pushed_object = warehouse.remove(&pushed_point);
                     while pushed_object.is_some() {
                         pushed_point = facing.step(pushed_point);
-                        pushed_object = warehouse.insert(pushed_point, pushed_object.unwrap());
+                        pushed_object = warehouse.set(&pushed_point, pushed_object);
                     }
                 }
             }
@@ -340,19 +340,15 @@ fn two(input: &Input2) -> Output {
     }
 
     let mut score = 0;
-    for (point, object) in warehouse.iter() {
-        if *object == Object2::CrateLeft {
+    for (point, object) in warehouse.enumerate() {
+        if *object == Some(Object2::CrateLeft) {
             score += (100 * (point.1) + (point.0)) as u32;
         }
     }
     score
 }
 
-fn push_crates(
-    warehouse: &mut FxHashMap<Point, Object2>,
-    step_target: Point,
-    facing: Facing,
-) -> bool {
+fn push_crates(warehouse: &mut Map<Option<Object2>>, step_target: Point, facing: Facing) -> bool {
     let mut push_front: SmallVec<[Point; 32]> = SmallVec::new();
     let mut to_push = FxHashSet::with_capacity_and_hasher(32, FxBuildHasher::default());
     match warehouse.get(&step_target) {
@@ -393,34 +389,34 @@ fn push_crates(
     if facing == Facing::South {
         for point in to_push.rev() {
             let push_target = facing.step(point);
-            let from = warehouse.remove(&point).unwrap();
+            let from = warehouse.remove(&point);
             warehouse
-                .insert(push_target, from)
+                .set(&push_target, from)
                 .inspect(|o| unreachable!("Missed a {o:?} while pushing"));
         }
     } else {
         debug_assert!(facing == Facing::North);
         for point in to_push {
             let push_target = facing.step(point);
-            let from = warehouse.remove(&point).unwrap();
+            let from = warehouse.remove(&point);
             warehouse
-                .insert(push_target, from)
+                .set(&push_target, from)
                 .inspect(|o| unreachable!("Missed a {o:?} while pushing"));
         }
     }
     true
 }
 
-fn _debug_draw_2(warehouse: &FxHashMap<Point, Object2>, wilmot: Point) {
-    let width = warehouse.keys().map(|p| p.0).max().unwrap() + 1;
-    let height = warehouse.keys().map(|p| p.1).max().unwrap() + 1;
+fn _debug_draw_2(warehouse: &Map<Option<Object2>>, wilmot: Point) {
+    let width = warehouse.width;
+    let height = warehouse.height;
     for y in 0..height {
         for x in 0..width {
-            if warehouse.get(&Point(x, y)) == Some(&Object2::Wall) {
+            if warehouse.get(&Point(x, y)) == &Some(Object2::Wall) {
                 print!("#");
-            } else if warehouse.get(&Point(x, y)) == Some(&Object2::CrateLeft) {
+            } else if warehouse.get(&Point(x, y)) == &Some(Object2::CrateLeft) {
                 print!("[");
-            } else if warehouse.get(&Point(x, y)) == Some(&Object2::CrateRight) {
+            } else if warehouse.get(&Point(x, y)) == &Some(Object2::CrateRight) {
                 print!("]");
             } else if Point(x, y) == wilmot {
                 print!("@");
