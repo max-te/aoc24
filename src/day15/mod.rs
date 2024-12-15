@@ -271,16 +271,18 @@ fn push_crates(
     step_target: Point,
     facing: Facing,
 ) -> bool {
-    let mut push_front = Vec::with_capacity(8);
+    let mut push_front = Vec::new();
     let mut to_push = BTreeSet::new();
     match warehouse.get(&step_target) {
         Some(Object2::Wall) => return false,
         None => return true,
         Some(Object2::CrateLeft) => {
+            push_front.reserve(16);
             push_front.push(step_target);
             push_front.push(Facing::East.step(step_target));
         }
         Some(Object2::CrateRight) => {
+            push_front.reserve(16);
             push_front.push(step_target);
             push_front.push(Facing::West.step(step_target));
         }
