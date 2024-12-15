@@ -1,8 +1,9 @@
 use aoc_runner_derive::{aoc, aoc_generator};
-use rustc_hash::{FxBuildHasher, FxHashMap};
+use itertools::Itertools;
+use rustc_hash::{FxBuildHasher, FxHashMap, FxHashSet};
 use smallvec::SmallVec;
 use std::{
-    collections::BTreeSet,
+    fmt::Debug,
     hash::{Hash, Hasher},
 };
 
@@ -14,6 +15,72 @@ struct Point(Coord, Coord);
 impl Hash for Point {
     fn hash<H: Hasher>(&self, state: &mut H) {
         state.write_u32((self.0 as u32) << 16 | self.1 as u32);
+    }
+}
+
+struct Map<T> {
+    data: Vec<T>,
+    width: Coord,
+    height: Coord,
+}
+
+impl<T> Map<T> {
+    fn get(&self, point: &Point) -> &T {
+        &self.data[(point.1 * self.width + point.0) as usize]
+    }
+
+    fn enumerate(&self) -> impl Iterator<Item = (Point, &T)> {
+        self.data
+            .iter()
+            .enumerate()
+            .map(|(i, d)| (self.to_point(i), d))
+    }
+
+    #[inline(always)]
+    fn to_point(&self, index: usize) -> Point {
+        Point(index as Coord % self.width, index as Coord / self.width)
+    }
+}
+
+impl<T> Debug for Map<T>
+where
+    T: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for y in 0..self.height {
+            for x in 0..self.width {
+                f.write_fmt(format_args!("{:?}", self.get(&Point(x, y))))?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl<T> Clone for Map<T>
+where
+    T: Clone,
+{
+    fn clone(&self) -> Self {
+        Map {
+            data: self.data.clone(),
+            width: self.width,
+            height: self.height,
+        }
+    }
+}
+
+impl<T: Default + Clone> Map<T> {
+    fn remove(&mut self, point: &Point) -> T {
+        let mut res = T::default();
+        let cell = &mut self.data[point.1 as usize * self.width as usize + point.0 as usize];
+        std::mem::swap(&mut res, cell);
+        res
+    }
+
+    fn set(&mut self, point: &Point, mut value: T) -> T {
+        let cell = &mut self.data[point.1 as usize * self.width as usize + point.0 as usize];
+        std::mem::swap(&mut value, cell);
+        value
     }
 }
 
@@ -44,7 +111,7 @@ enum Object {
 
 #[derive(Debug, Clone)]
 struct Input {
-    warehouse: FxHashMap<Point, Object>,
+    warehouse: Map<Option<Object>>,
     wilmot: Point,
     moves: Vec<Facing>,
 }
@@ -52,6 +119,9 @@ struct Input {
 #[aoc_generator(day15, part1)]
 fn parse(puzzle: &str) -> Input {
     let puzzle = puzzle.as_bytes();
+    let mut map = Vec::with_capacity(puzzle.len());
+    let mut width = None;
+    let mut height = None;
     let mut warehouse =
         FxHashMap::with_capacity_and_hasher(puzzle.len() / 2, FxBuildHasher::default());
     let mut point = Point(0, 0);
@@ -60,20 +130,27 @@ fn parse(puzzle: &str) -> Input {
     for ch in puzzle {
         match *ch {
             b'\n' => {
+                width.get_or_insert(point.0);
                 point.1 += 1;
                 point.0 = 0;
                 continue;
             }
             b'#' => {
+                map.push(Some(Object::Wall));
                 warehouse.insert(point.clone(), Object::Wall);
+                height = Some(point.1 + 1);
             }
             b'O' => {
+                map.push(Some(Object::Crate));
                 warehouse.insert(point.clone(), Object::Crate);
             }
             b'@' => {
+                map.push(None);
                 wilmot = Some(point.clone());
             }
-            b'.' => {}
+            b'.' => {
+                map.push(None);
+            }
             b'^' => moves.push(Facing::North),
             b'v' => moves.push(Facing::South),
             b'<' => moves.push(Facing::West),
@@ -83,20 +160,24 @@ fn parse(puzzle: &str) -> Input {
         point.0 += 1;
     }
     Input {
-        warehouse,
+        warehouse: Map {
+            data: map,
+            width: width.unwrap(),
+            height: height.unwrap(),
+        },
         wilmot: wilmot.unwrap(),
         moves,
     }
 }
 
-fn _debug_draw(warehouse: &FxHashMap<Point, Object>, wilmot: Point) {
-    let width = warehouse.keys().map(|p| p.0).max().unwrap() + 1;
-    let height = warehouse.keys().map(|p| p.1).max().unwrap() + 1;
+fn _debug_draw(warehouse: &Map<Option<Object>>, wilmot: Point) {
+    let width = warehouse.width;
+    let height = warehouse.height;
     for y in 0..height {
         for x in 0..width {
-            if warehouse.get(&Point(x, y)) == Some(&Object::Wall) {
+            if *warehouse.get(&Point(x, y)) == Some(Object::Wall) {
                 print!("#");
-            } else if warehouse.get(&Point(x, y)) == Some(&Object::Crate) {
+            } else if *warehouse.get(&Point(x, y)) == Some(Object::Crate) {
                 print!("O");
             } else if Point(x, y) == wilmot {
                 print!("@");
@@ -114,28 +195,28 @@ fn one(input: &Input) -> Output {
     let mut warehouse = input.warehouse.clone();
     let mut wilmot = input.wilmot.clone();
     for facing in input.moves.iter() {
-        // #[cfg(debug_assertions)]
-        // dbg!(&facing);
+        #[cfg(debug_assertions)]
+        _debug_draw(&warehouse, wilmot);
+        #[cfg(debug_assertions)]
+        dbg!(&facing);
         let step_target = facing.step(wilmot);
         let mut push_end = step_target.clone();
-        while warehouse.get(&push_end) == Some(&Object::Crate) {
+        while *warehouse.get(&push_end) == Some(Object::Crate) {
             push_end = facing.step(push_end);
         }
-        if warehouse.get(&push_end) == Some(&Object::Wall) {
+        if *warehouse.get(&push_end) == Some(Object::Wall) {
             continue;
         } else {
             wilmot = step_target;
             warehouse.remove(&step_target).inspect(|o| {
-                warehouse.insert(push_end, *o);
+                warehouse.set(&push_end, Some(*o));
             });
         }
-        // #[cfg(debug_assertions)]
-        // debug_draw(&warehouse, wilmot);
     }
 
     let mut score = 0;
-    for (point, object) in warehouse.iter() {
-        if *object == Object::Crate {
+    for (point, object) in warehouse.enumerate() {
+        if *object == Some(Object::Crate) {
             score += (100 * (point.1) + (point.0)) as u32;
         }
     }
@@ -273,7 +354,7 @@ fn push_crates(
     facing: Facing,
 ) -> bool {
     let mut push_front: SmallVec<[Point; 32]> = SmallVec::new();
-    let mut to_push = BTreeSet::new();
+    let mut to_push = FxHashSet::with_capacity_and_hasher(32, FxBuildHasher::default());
     match warehouse.get(&step_target) {
         Some(Object2::Wall) => return false,
         None => return true,
@@ -308,8 +389,9 @@ fn push_crates(
         to_push.insert(point);
     }
 
+    let to_push = to_push.into_iter().sorted_unstable_by_key(|p| p.1);
     if facing == Facing::South {
-        for &point in to_push.iter().rev() {
+        for point in to_push.rev() {
             let push_target = facing.step(point);
             let from = warehouse.remove(&point).unwrap();
             warehouse
@@ -318,7 +400,7 @@ fn push_crates(
         }
     } else {
         debug_assert!(facing == Facing::North);
-        for &point in to_push.iter() {
+        for point in to_push {
             let push_target = facing.step(point);
             let from = warehouse.remove(&point).unwrap();
             warehouse
