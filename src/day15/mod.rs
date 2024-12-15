@@ -1,5 +1,5 @@
 use aoc_runner_derive::{aoc, aoc_generator};
-use rustc_hash::{FxBuildHasher, FxHashMap, FxHashSet};
+use rustc_hash::{FxBuildHasher, FxHashMap};
 use std::{
     collections::BTreeSet,
     hash::{Hash, Hasher},
@@ -9,12 +9,6 @@ type Output = u32;
 type Coord = u16;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct Point(Coord, Coord);
-
-impl Point {
-    fn in_range(&self, width: Coord, height: Coord) -> bool {
-        (0..width).contains(&self.0) && (0..height).contains(&self.1)
-    }
-}
 
 impl Hash for Point {
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -37,15 +31,6 @@ impl Facing {
             Facing::South => Point(point.0, point.1 + 1),
             Facing::West => Point(point.0 - 1, point.1),
             Facing::East => Point(point.0 + 1, point.1),
-        }
-    }
-
-    fn opposite(self) -> Facing {
-        match self {
-            Facing::North => Facing::South,
-            Facing::South => Facing::North,
-            Facing::West => Facing::East,
-            Facing::East => Facing::West,
         }
     }
 }
@@ -103,7 +88,7 @@ fn parse(puzzle: &str) -> Input {
     }
 }
 
-fn debug_draw(warehouse: &FxHashMap<Point, Object>, wilmot: Point) {
+fn _debug_draw(warehouse: &FxHashMap<Point, Object>, wilmot: Point) {
     let width = warehouse.keys().map(|p| p.0).max().unwrap() + 1;
     let height = warehouse.keys().map(|p| p.1).max().unwrap() + 1;
     for y in 0..height {
@@ -229,7 +214,7 @@ fn two(input: &Input2) -> Output {
     let mut warehouse = input.warehouse.clone();
     let mut wilmot = input.wilmot.clone();
     #[cfg(debug_assertions)]
-    debug_draw_2(&warehouse, wilmot);
+    _debug_draw_2(&warehouse, wilmot);
 
     for facing in input.moves.iter() {
         #[cfg(debug_assertions)]
@@ -269,7 +254,7 @@ fn two(input: &Input2) -> Output {
         }
 
         #[cfg(debug_assertions)]
-        debug_draw_2(&warehouse, wilmot);
+        _debug_draw_2(&warehouse, wilmot);
     }
 
     let mut score = 0;
@@ -341,7 +326,7 @@ fn push_crates(
     true
 }
 
-fn debug_draw_2(warehouse: &FxHashMap<Point, Object2>, wilmot: Point) {
+fn _debug_draw_2(warehouse: &FxHashMap<Point, Object2>, wilmot: Point) {
     let width = warehouse.keys().map(|p| p.0).max().unwrap() + 1;
     let height = warehouse.keys().map(|p| p.1).max().unwrap() + 1;
     for y in 0..height {

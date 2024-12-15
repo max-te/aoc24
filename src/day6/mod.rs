@@ -199,11 +199,11 @@ impl EdgeMap {
         self.rows[point.1 as usize - 1].remove(index);
     }
 
-    fn contains(&self, point: &Point) -> bool {
-        self.columns[point.0 as usize - 1]
-            .binary_search(&point.1)
-            .is_ok()
-    }
+    // fn contains(&self, point: &Point) -> bool {
+    //     self.columns[point.0 as usize - 1]
+    //         .binary_search(&point.1)
+    //         .is_ok()
+    // }
 
     fn from_obstacles(obstacles: &FxHashSet<Point>, width: Coord, height: Coord) -> Self {
         let mut slf = Self::with_size(width, height);

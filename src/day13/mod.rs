@@ -2,7 +2,7 @@ use core::str;
 
 use aoc_runner_derive::{aoc, aoc_generator};
 
-use crate::util::{parse_digits_unchecked, parse_initial_digits};
+use crate::util::parse_initial_digits;
 
 type Num = i64;
 #[derive(Debug, Clone, Copy)]
