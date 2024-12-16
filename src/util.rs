@@ -148,6 +148,13 @@ impl<'a, T> GroupedView<'a, T> {
     }
 }
 
+pub fn first_line_length(input: &[u8]) -> usize {
+    input
+        .iter()
+        .position(|&byte| byte == b'\n')
+        .unwrap_or(input.len())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
