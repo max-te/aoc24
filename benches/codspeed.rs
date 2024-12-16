@@ -1,5 +1,4 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use reqwest::blocking::Client;
 
 fn load_input(day: u8) -> String {
     let input_file_path = format!("input/2024/day{day}.txt");
@@ -9,17 +8,18 @@ fn load_input(day: u8) -> String {
 
     let session = std::env::var("AOC_SESSION")
         .expect("AOC_SESSION should be set when inputs are not stored locally");
-    let client = Client::new();
+    let client = ureq::AgentBuilder::new().build();
     let url = format!("https://adventofcode.com/2024/day/{day}/input");
 
-    client
+    let response = client
         .get(&url)
-        .header("Cookie", format!("session={}", session))
-        .send()
-        .expect("should be able to send request")
-        .error_for_status()
-        .expect("status should be successful")
-        .text()
+        .set("Cookie", &format!("session={}", session))
+        .call()
+        .expect("should be able to send request");
+    assert_eq!(response.status(), 200);
+
+    response
+        .into_string()
         .expect("should be able to read response body")
 }
 
