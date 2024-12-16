@@ -92,38 +92,10 @@ fn parse(input: &str) -> Input {
     (maze, start, end, goal, width)
 }
 
-#[aoc(day16, part1, dir_dijkstra)]
+#[aoc(day16, part1, dijkstra)]
 fn one((maze, start, _, goal, _): &Input) -> Num {
     let path = petgraph::algo::dijkstra(&maze, *start, Some(*goal), |e| *e.weight());
     *path.get(goal).unwrap() - 1
-}
-
-#[aoc(day16, part1, dir_astar)]
-fn one_astar((maze, start, end, goal, width): &Input) -> Num {
-    let goal_base_idx = end[0].index() / 4;
-    let path = petgraph::algo::astar(
-        maze,
-        *start,
-        |v| v == *goal,
-        |e| *e.weight(),
-        |v| {
-            if v == *goal {
-                0
-            } else {
-                let idx_diff = goal_base_idx.abs_diff(v.index() / 4);
-                let h_diff = idx_diff % width;
-                let v_diff = idx_diff / width;
-                (h_diff + v_diff) as u32 + {
-                    if h_diff > 0 && v_diff > 0 {
-                        1000
-                    } else {
-                        0
-                    }
-                }
-            }
-        },
-    );
-    path.unwrap().0 - 1
 }
 
 #[aoc(day16, part2, dijkstra)]
