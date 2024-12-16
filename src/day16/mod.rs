@@ -8,7 +8,8 @@ use crate::util::first_line_length;
 type Num = u32;
 type Input = (Graph<(), Num>, NodeIndex, [NodeIndex; 4], NodeIndex, usize);
 
-#[aoc_generator(day16)]
+#[aoc_generator(day16, part1, dijkstra)]
+#[aoc_generator(day16, part2, dijkstra)]
 fn parse(input: &str) -> Input {
     let input = input.as_bytes().trim_ascii();
     let mut maze = Graph::<(), Num>::new();
@@ -127,12 +128,204 @@ fn two((maze, start, _, goal, _): &Input) -> usize {
     fields_on_paths.len()
 }
 
-pub fn part1(puzzle: &str) -> Num {
-    one(&parse(puzzle))
+pub fn part1(puzzle: &str) -> usize {
+    one_astar(&parse_alt(puzzle))
 }
 
 pub fn part2(puzzle: &str) -> usize {
     two(&parse(puzzle))
+}
+
+#[derive(Debug, Clone)]
+struct Grid2D {
+    data: Vec<u8>,
+    pad: usize,
+    width: usize,
+    height: usize,
+}
+
+impl Grid2D {
+    fn new_from_newlines(data: Vec<u8>) -> Self {
+        let width = first_line_length(&data);
+        let pad = 1;
+        let height = (data.len() + pad) / (width + pad);
+        Self {
+            data,
+            pad,
+            width,
+            height,
+        }
+    }
+
+    fn get(&self, x: usize, y: usize) -> Option<u8> {
+        if x >= self.width || y >= self.height {
+            None
+        } else {
+            Some(self.data[self.to_index(x, y)])
+        }
+    }
+
+    fn is_passable(&self, x: usize, y: usize) -> bool {
+        self.get(x, y).map_or(false, |c| c != b'#')
+    }
+
+    fn to_index(&self, x: usize, y: usize) -> usize {
+        y * (self.width + self.pad) + x
+    }
+
+    fn to_point(&self, i: usize) -> (usize, usize) {
+        (i % (self.width + self.pad), i / (self.width + self.pad))
+    }
+}
+
+type InputPathfinding = (Grid2D, (usize, usize), (usize, usize));
+
+#[aoc_generator(day16, part1, pathfinding)]
+#[aoc_generator(day16, part1, pathfinding_astar)]
+#[aoc_generator(day16, part2, pathfinding_astar)]
+fn parse_alt(puzzle: &str) -> InputPathfinding {
+    let grid = Grid2D::new_from_newlines(puzzle.as_bytes().to_vec());
+    let mut start = None;
+    let mut end = None;
+    for i in 0..grid.data.len() {
+        let c = grid.data[i];
+        if c == b'S' {
+            start = Some(grid.to_point(i));
+            if end.is_some() {
+                break;
+            }
+        } else if c == b'E' {
+            end = Some(grid.to_point(i));
+            if start.is_some() {
+                break;
+            }
+        }
+    }
+
+    (grid, start.unwrap(), end.unwrap())
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum Facing {
+    North,
+    South,
+    West,
+    East,
+}
+
+impl Facing {
+    #[inline]
+    fn advance(&self, point: (usize, usize)) -> (usize, usize) {
+        match self {
+            Facing::North => (point.0, point.1 - 1),
+            Facing::South => (point.0, point.1 + 1),
+            Facing::West => (point.0 - 1, point.1),
+            Facing::East => (point.0 + 1, point.1),
+        }
+    }
+
+    #[inline]
+    fn turn_right(&self) -> Facing {
+        match self {
+            Facing::North => Facing::East,
+            Facing::East => Facing::South,
+            Facing::South => Facing::West,
+            Facing::West => Facing::North,
+        }
+    }
+
+    #[inline]
+    fn turn_left(&self) -> Facing {
+        match self {
+            Facing::North => Facing::West,
+            Facing::West => Facing::South,
+            Facing::South => Facing::East,
+            Facing::East => Facing::North,
+        }
+    }
+}
+
+#[aoc(day16, part1, pathfinding)]
+fn one_alt((grid, start, end): &InputPathfinding) -> Num {
+    let start = (start.0, start.1, Facing::East);
+    let res = pathfinding::directed::dijkstra::dijkstra(
+        &start,
+        |(x, y, d)| {
+            let mut turns: SmallVec<[_; 3]> = smallvec![
+                ((*x, *y, d.turn_left()), 1000),
+                ((*x, *y, d.turn_right()), 1000),
+            ];
+            let forward = d.advance((*x, *y));
+            if grid.is_passable(forward.0, forward.1) {
+                turns.push(((forward.0, forward.1, *d), 1));
+            }
+            turns
+        },
+        |node| node.0 == end.0 && node.1 == end.1,
+    )
+    .unwrap();
+
+    res.1
+}
+
+#[aoc(day16, part1, pathfinding_astar)]
+fn one_astar((grid, start, end): &InputPathfinding) -> usize {
+    let start = (start.0, start.1, Facing::East);
+    let res = pathfinding::directed::astar::astar(
+        &start,
+        |(x, y, d)| {
+            let mut turns: SmallVec<[_; 3]> = smallvec![
+                ((*x, *y, d.turn_left()), 1000),
+                ((*x, *y, d.turn_right()), 1000),
+            ];
+            let forward = d.advance((*x, *y));
+            if grid.is_passable(forward.0, forward.1) {
+                turns.push(((forward.0, forward.1, *d), 1));
+            }
+            turns
+        },
+        |node| node.0.abs_diff(end.0) + node.1.abs_diff(end.1),
+        |node| node.0 == end.0 && node.1 == end.1,
+    )
+    .unwrap();
+
+    res.1
+}
+
+#[aoc(day16, part2, pathfinding_astar)]
+fn two_astar((grid, start, end): &InputPathfinding) -> usize {
+    let start = (start.0, start.1, Facing::East);
+    let res = pathfinding::directed::astar::astar_bag(
+        &start,
+        |(x, y, d)| {
+            let mut turns: SmallVec<[_; 3]> = smallvec![
+                ((*x, *y, d.turn_left()), 1000),
+                ((*x, *y, d.turn_right()), 1000),
+            ];
+            let forward = d.advance((*x, *y));
+            if grid.is_passable(forward.0, forward.1) {
+                turns.push(((forward.0, forward.1, *d), 1));
+            }
+            turns
+        },
+        |node| {
+            node.0.abs_diff(end.0)
+                + node.1.abs_diff(end.1)
+                + if node.0 != end.0 && node.1 != end.1 {
+                    1000
+                } else {
+                    0
+                }
+        },
+        |node| node.0 == end.0 && node.1 == end.1,
+    )
+    .unwrap();
+
+    let mut tiles_on_path: FxHashSet<(usize, usize)> = FxHashSet::default();
+    for path in res.0 {
+        tiles_on_path.extend(path.into_iter().map(|(x, y, _)| (x, y)));
+    }
+    tiles_on_path.len()
 }
 
 #[cfg(test)]
