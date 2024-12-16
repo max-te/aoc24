@@ -8,12 +8,6 @@ name = "aoc24"
 path = "src/lib.rs"
 doctest = false
 
-[[bin]]
-name = "aoc24-main"
-path = "src/main.rs"
-doctest = false
-test = false
-
 [[bench]]
 name = "codspeed"
 harness = false
