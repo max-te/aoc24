@@ -1,7 +1,4 @@
-use std::{
-    hash::{Hash, Hasher},
-    os::linux::raw::stat,
-};
+use std::hash::{Hash, Hasher};
 
 use aoc_runner_derive::{aoc, aoc_generator};
 use petgraph::{graph::NodeIndex, visit::EdgeRef, Graph};
@@ -255,22 +252,33 @@ impl Facing {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Node(Coord, Coord, Facing);
+
+impl Hash for Node {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_u64((self.0 as u64) << 32 | (self.1 as u64) << 16 | self.2 as u64);
+    }
+}
+
 #[aoc(day16, part1, pathfinding)]
 fn one_alt((grid, start, end): &InputPathfinding) -> Num {
-    let start = (start.0, start.1, Facing::East);
+    let start = Node(start.0, start.1, Facing::East);
     let res = pathfinding::directed::dijkstra::dijkstra(
         &start,
-        |(x, y, d)| {
+        #[inline(always)]
+        |Node(x, y, d)| {
             let mut turns: SmallVec<[_; 3]> = smallvec![
-                ((*x, *y, d.turn_left()), 1000),
-                ((*x, *y, d.turn_right()), 1000),
+                (Node(*x, *y, d.turn_left()), 1000),
+                (Node(*x, *y, d.turn_right()), 1000),
             ];
             let forward = d.advance((*x, *y));
             if grid.is_passable(forward.0, forward.1) {
-                turns.push(((forward.0, forward.1, *d), 1));
+                turns.push((Node(forward.0, forward.1, *d), 1));
             }
             turns
         },
+        #[inline(always)]
         |node| node.0 == end.0 && node.1 == end.1,
     )
     .unwrap();
@@ -280,21 +288,24 @@ fn one_alt((grid, start, end): &InputPathfinding) -> Num {
 
 #[aoc(day16, part1, pathfinding_astar)]
 fn one_astar((grid, start, end): &InputPathfinding) -> usize {
-    let start = (start.0, start.1, Facing::East);
+    let start = Node(start.0, start.1, Facing::East);
     let res = pathfinding::directed::astar::astar(
         &start,
-        |(x, y, d)| {
+        #[inline(always)]
+        |Node(x, y, d)| {
             let mut turns: SmallVec<[_; 3]> = smallvec![
-                ((*x, *y, d.turn_left()), 1000),
-                ((*x, *y, d.turn_right()), 1000),
+                (Node(*x, *y, d.turn_left()), 1000),
+                (Node(*x, *y, d.turn_right()), 1000),
             ];
             let forward = d.advance((*x, *y));
             if grid.is_passable(forward.0, forward.1) {
-                turns.push(((forward.0, forward.1, *d), 1));
+                turns.push((Node(forward.0, forward.1, *d), 1));
             }
             turns
         },
+        #[inline(always)]
         |node| (node.0.abs_diff(end.0) + node.1.abs_diff(end.1)) as usize,
+        #[inline(always)]
         |node| node.0 == end.0 && node.1 == end.1,
     )
     .unwrap();
@@ -304,20 +315,22 @@ fn one_astar((grid, start, end): &InputPathfinding) -> usize {
 
 #[aoc(day16, part2, pathfinding_astar)]
 fn two_astar((grid, start, end): &InputPathfinding) -> usize {
-    let start = (start.0, start.1, Facing::East);
+    let start = Node(start.0, start.1, Facing::East);
     let res = pathfinding::directed::astar::astar_bag(
         &start,
-        |(x, y, d)| {
+        #[inline(always)]
+        |Node(x, y, d)| {
             let mut turns: SmallVec<[_; 3]> = smallvec![
-                ((*x, *y, d.turn_left()), 1000),
-                ((*x, *y, d.turn_right()), 1000),
+                (Node(*x, *y, d.turn_left()), 1000),
+                (Node(*x, *y, d.turn_right()), 1000),
             ];
             let forward = d.advance((*x, *y));
             if grid.is_passable(forward.0, forward.1) {
-                turns.push(((forward.0, forward.1, *d), 1));
+                turns.push((Node(forward.0, forward.1, *d), 1));
             }
             turns
         },
+        #[inline(always)]
         |node| {
             node.0.abs_diff(end.0) as usize
                 + node.1.abs_diff(end.1) as usize
@@ -327,13 +340,14 @@ fn two_astar((grid, start, end): &InputPathfinding) -> usize {
                     0
                 }
         },
+        #[inline(always)]
         |node| node.0 == end.0 && node.1 == end.1,
     )
     .unwrap();
 
     let mut tiles_on_path: FxHashSet<(Coord, Coord)> = FxHashSet::default();
     for path in res.0 {
-        tiles_on_path.extend(path.into_iter().map(|(x, y, _)| (x, y)));
+        tiles_on_path.extend(path.into_iter().map(|Node(x, y, _)| (x, y)));
     }
     tiles_on_path.len()
 }
