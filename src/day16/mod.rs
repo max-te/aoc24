@@ -1,3 +1,8 @@
+use std::{
+    hash::{Hash, Hasher},
+    os::linux::raw::stat,
+};
+
 use aoc_runner_derive::{aoc, aoc_generator};
 use petgraph::{graph::NodeIndex, visit::EdgeRef, Graph};
 use rustc_hash::FxHashSet;
@@ -136,19 +141,21 @@ pub fn part2(puzzle: &str) -> usize {
     two(&parse(puzzle))
 }
 
+type Coord = u16;
+
 #[derive(Debug, Clone)]
 struct Grid2D {
     data: Vec<u8>,
-    pad: usize,
-    width: usize,
-    height: usize,
+    pad: Coord,
+    width: Coord,
+    height: Coord,
 }
 
 impl Grid2D {
     fn new_from_newlines(data: Vec<u8>) -> Self {
-        let width = first_line_length(&data);
-        let pad = 1;
-        let height = (data.len() + pad) / (width + pad);
+        let width = first_line_length(&data) as Coord;
+        let pad: Coord = 1;
+        let height = (data.len() as Coord + pad) / (width + pad);
         Self {
             data,
             pad,
@@ -157,7 +164,7 @@ impl Grid2D {
         }
     }
 
-    fn get(&self, x: usize, y: usize) -> Option<u8> {
+    fn get(&self, x: Coord, y: Coord) -> Option<u8> {
         if x >= self.width || y >= self.height {
             None
         } else {
@@ -165,20 +172,23 @@ impl Grid2D {
         }
     }
 
-    fn is_passable(&self, x: usize, y: usize) -> bool {
+    fn is_passable(&self, x: Coord, y: Coord) -> bool {
         self.get(x, y).map_or(false, |c| c != b'#')
     }
 
-    fn to_index(&self, x: usize, y: usize) -> usize {
-        y * (self.width + self.pad) + x
+    fn to_index(&self, x: Coord, y: Coord) -> usize {
+        (y * (self.width + self.pad) + x) as usize
     }
 
-    fn to_point(&self, i: usize) -> (usize, usize) {
-        (i % (self.width + self.pad), i / (self.width + self.pad))
+    fn to_point(&self, i: usize) -> (Coord, Coord) {
+        (
+            i as Coord % (self.width + self.pad),
+            i as Coord / (self.width + self.pad),
+        )
     }
 }
 
-type InputPathfinding = (Grid2D, (usize, usize), (usize, usize));
+type InputPathfinding = (Grid2D, (Coord, Coord), (Coord, Coord));
 
 #[aoc_generator(day16, part1, pathfinding)]
 #[aoc_generator(day16, part1, pathfinding_astar)]
@@ -215,7 +225,7 @@ enum Facing {
 
 impl Facing {
     #[inline]
-    fn advance(&self, point: (usize, usize)) -> (usize, usize) {
+    fn advance(&self, point: (Coord, Coord)) -> (Coord, Coord) {
         match self {
             Facing::North => (point.0, point.1 - 1),
             Facing::South => (point.0, point.1 + 1),
@@ -284,7 +294,7 @@ fn one_astar((grid, start, end): &InputPathfinding) -> usize {
             }
             turns
         },
-        |node| node.0.abs_diff(end.0) + node.1.abs_diff(end.1),
+        |node| (node.0.abs_diff(end.0) + node.1.abs_diff(end.1)) as usize,
         |node| node.0 == end.0 && node.1 == end.1,
     )
     .unwrap();
@@ -309,8 +319,8 @@ fn two_astar((grid, start, end): &InputPathfinding) -> usize {
             turns
         },
         |node| {
-            node.0.abs_diff(end.0)
-                + node.1.abs_diff(end.1)
+            node.0.abs_diff(end.0) as usize
+                + node.1.abs_diff(end.1) as usize
                 + if node.0 != end.0 && node.1 != end.1 {
                     1000
                 } else {
@@ -321,7 +331,7 @@ fn two_astar((grid, start, end): &InputPathfinding) -> usize {
     )
     .unwrap();
 
-    let mut tiles_on_path: FxHashSet<(usize, usize)> = FxHashSet::default();
+    let mut tiles_on_path: FxHashSet<(Coord, Coord)> = FxHashSet::default();
     for path in res.0 {
         tiles_on_path.extend(path.into_iter().map(|(x, y, _)| (x, y)));
     }
