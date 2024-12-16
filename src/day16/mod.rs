@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use aoc_runner_derive::{aoc, aoc_generator};
 use petgraph::{graph::NodeIndex, visit::EdgeRef, Graph};
 use rustc_hash::FxHashSet;
@@ -8,19 +6,12 @@ use smallvec::{smallvec, SmallVec};
 use crate::util::first_line_length;
 
 type Num = u32;
-type NodeInfo = (usize, usize, u8);
-type Input = (
-    Graph<NodeInfo, Num>,
-    NodeIndex,
-    [NodeIndex; 4],
-    NodeIndex,
-    usize,
-);
+type Input = (Graph<(), Num>, NodeIndex, [NodeIndex; 4], NodeIndex, usize);
 
 #[aoc_generator(day16)]
 fn parse(input: &str) -> Input {
     let input = input.as_bytes().trim_ascii();
-    let mut maze = Graph::<NodeInfo, Num>::new();
+    let mut maze = Graph::<(), Num>::new();
     let width = first_line_length(input);
     const NODES_PER_SQUARE: usize = 4;
     let stride = width * NODES_PER_SQUARE;
@@ -45,10 +36,10 @@ fn parse(input: &str) -> Input {
         }
 
         let v_idx_start = node_list.len();
-        let v_north = maze.add_node((row, col, 0));
-        let v_east = maze.add_node((row, col, 1));
-        let v_south = maze.add_node((row, col, 2));
-        let v_west = maze.add_node((row, col, 3));
+        let v_north = maze.add_node(());
+        let v_east = maze.add_node(());
+        let v_south = maze.add_node(());
+        let v_west = maze.add_node(());
         node_list.extend_from_slice(&[Some(v_north), Some(v_east), Some(v_south), Some(v_west)]);
 
         match ch {
@@ -90,7 +81,7 @@ fn parse(input: &str) -> Input {
     }
     let start = start.unwrap();
     let end = end.unwrap();
-    let goal = maze.add_node((usize::MAX, usize::MAX, u8::MAX));
+    let goal = maze.add_node(());
     maze.extend_with_edges([
         (end[0], goal, 1),
         (end[1], goal, 1),
