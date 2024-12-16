@@ -45,5 +45,5 @@ macro_rules! benchmark_days {
     };
 }
 
-benchmark_days!(1, 2, 3, 4, 5, 6, /*7,*/ 8, 9, 10, 11, 12, 13, 14, 15);
+benchmark_days!(1, 2, 3, 4, 5, 6, /*7,*/ 8, 9, 10, 11, 12, 13, 14, 15, 16);
 criterion_main!(days);

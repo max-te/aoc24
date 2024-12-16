@@ -1,5 +1,9 @@
+use std::collections::HashSet;
+
 use aoc_runner_derive::{aoc, aoc_generator};
-use petgraph::{graph::NodeIndex, Graph};
+use petgraph::{graph::NodeIndex, visit::EdgeRef, Graph};
+use rustc_hash::FxHashSet;
+use smallvec::{smallvec, SmallVec};
 
 use crate::util::first_line_length;
 
@@ -88,10 +92,10 @@ fn parse(input: &str) -> Input {
     let end = end.unwrap();
     let goal = maze.add_node((usize::MAX, usize::MAX, u8::MAX));
     maze.extend_with_edges([
-        (end[0], goal, 0),
-        (end[1], goal, 0),
-        (end[2], goal, 0),
-        (end[3], goal, 0),
+        (end[0], goal, 1),
+        (end[1], goal, 1),
+        (end[2], goal, 1),
+        (end[3], goal, 1),
     ]);
 
     (maze, start, end, goal, width)
@@ -100,7 +104,7 @@ fn parse(input: &str) -> Input {
 #[aoc(day16, part1, dir_dijkstra)]
 fn one((maze, start, _, goal, _): &Input) -> Num {
     let path = petgraph::algo::dijkstra(&maze, *start, Some(*goal), |e| *e.weight());
-    *path.get(goal).unwrap()
+    *path.get(goal).unwrap() - 1
 }
 
 #[aoc(day16, part1, dir_astar)]
@@ -128,11 +132,44 @@ fn one_astar((maze, start, end, goal, width): &Input) -> Num {
             }
         },
     );
-    path.unwrap().0
+    path.unwrap().0 - 1
+}
+
+#[aoc(day16, part2, dijkstra)]
+fn two((maze, start, _, goal, _): &Input) -> usize {
+    let distances = petgraph::algo::dijkstra(&maze, *start, None, |e| *e.weight());
+    let mut nodes_on_paths: FxHashSet<NodeIndex> = FxHashSet::default();
+    let mut front: SmallVec<[(NodeIndex, Num); 128]> =
+        smallvec![(*goal, *distances.get(goal).unwrap())];
+    while !front.is_empty() {
+        let (node, dist) = front.pop().unwrap();
+        if node != *goal {
+            nodes_on_paths.insert(node);
+        }
+
+        for in_edge in maze.edges_directed(node, petgraph::Direction::Incoming) {
+            let neighbor = in_edge.source();
+            let e_len = *in_edge.weight();
+            let n_dist = *distances.get(&neighbor).unwrap();
+            // dbg!(&node, &neighbor, &n_dist, &e_len, &dist);
+            if n_dist + e_len == dist {
+                front.push((neighbor, n_dist));
+            }
+        }
+    }
+    let fields_on_paths = nodes_on_paths
+        .iter()
+        .map(|n| n.index() / 4)
+        .collect::<FxHashSet<_>>();
+    fields_on_paths.len()
 }
 
 pub fn part1(puzzle: &str) -> Num {
     one(&parse(puzzle))
+}
+
+pub fn part2(puzzle: &str) -> usize {
+    two(&parse(puzzle))
 }
 
 #[cfg(test)]
@@ -149,5 +186,17 @@ mod examples {
     fn example1b() {
         let res = part1(include_str!("test2.txt"));
         assert_eq!(res, 11048);
+    }
+
+    #[test]
+    fn example2() {
+        let res = part2(include_str!("test.txt"));
+        assert_eq!(res, 45);
+    }
+
+    #[test]
+    fn example2b() {
+        let res = part2(include_str!("test2.txt"));
+        assert_eq!(res, 64);
     }
 }
