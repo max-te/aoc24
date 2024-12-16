@@ -6,6 +6,13 @@ edition = "2021"
 [lib]
 name = "aoc24"
 path = "src/lib.rs"
+doctest = false
+
+[[bin]]
+name = "aoc24-main"
+path = "src/main.rs"
+doctest = false
+test = false
 
 [[bench]]
 name = "codspeed"
@@ -31,4 +38,5 @@ reqwest = { version = "0.12.9", features = ["blocking"] }
 [profile.bench]
 opt-level = 3
 lto = "fat"
-panic = "abort"
+codegen-units = 1
+
