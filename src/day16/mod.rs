@@ -345,9 +345,12 @@ fn two_astar((grid, start, end): &InputPathfinding) -> usize {
     )
     .unwrap();
 
-    let mut tiles_on_path: FxHashSet<(Coord, Coord)> = FxHashSet::default();
+    let mut tiles_on_path = FxHashSet::default();
     for path in res.0 {
-        tiles_on_path.extend(path.into_iter().map(|Node(x, y, _)| (x, y)));
+        tiles_on_path.extend(
+            path.into_iter()
+                .map(|Node(x, y, _)| (x as u32) << 16 | (y as u32)),
+        );
     }
     tiles_on_path.len()
 }
