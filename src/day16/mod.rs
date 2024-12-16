@@ -130,8 +130,8 @@ fn two((maze, start, _, goal, _): &Input) -> usize {
     fields_on_paths.len()
 }
 
-pub fn part1(puzzle: &str) -> usize {
-    one_astar(&parse_alt(puzzle))
+pub fn part1(puzzle: &str) -> u32 {
+    one_alt(&parse_alt(puzzle))
 }
 
 pub fn part2(puzzle: &str) -> usize {
