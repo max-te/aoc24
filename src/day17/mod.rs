@@ -4,7 +4,7 @@ use crate::util::{parse_digit, parse_initial_digits};
 
 #[derive(Debug, Clone)]
 struct Tritron2417 {
-    instruction_pointer: Option<usize>,
+    instruction_pointer: usize,
     a: usize,
     b: usize,
     c: usize,
@@ -27,7 +27,7 @@ fn parse(input: &[u8]) -> Tritron2417 {
     }
 
     Tritron2417 {
-        instruction_pointer: Some(0),
+        instruction_pointer: 0,
         a: a as usize,
         b: b as usize,
         c: c as usize,
@@ -49,22 +49,23 @@ enum Opcode {
 }
 
 impl Opcode {
-    fn from_u8(num: u8) -> Option<Self> {
+    fn from_u8(num: u8) -> Self {
         match num {
-            0 => Some(Self::ADV),
-            1 => Some(Self::BXL),
-            2 => Some(Self::BST),
-            3 => Some(Self::JNZ),
-            4 => Some(Self::BXC),
-            5 => Some(Self::OUT),
-            6 => Some(Self::BDV),
-            7 => Some(Self::CDV),
-            _ => None,
+            0 => Self::ADV,
+            1 => Self::BXL,
+            2 => Self::BST,
+            3 => Self::JNZ,
+            4 => Self::BXC,
+            5 => Self::OUT,
+            6 => Self::BDV,
+            7 => Self::CDV,
+            _ => unreachable!(),
         }
     }
 }
 
 impl Tritron2417 {
+    #[inline(always)]
     fn eval_combo_operand(&self, operand: u8) -> usize {
         match operand {
             0..=3 => operand as usize,
@@ -76,9 +77,9 @@ impl Tritron2417 {
     }
 
     fn cycle(&mut self) {
-        if let Some(ptr) = self.instruction_pointer {
-            let opcode = Opcode::from_u8(self.rom[ptr]).unwrap();
-            let operand = self.rom[ptr + 1];
+        if self.instruction_pointer < self.rom.len() {
+            let opcode: Opcode = Opcode::from_u8(self.rom[self.instruction_pointer]);
+            let operand = self.rom[self.instruction_pointer + 1];
 
             match opcode {
                 Opcode::ADV => {
@@ -94,7 +95,7 @@ impl Tritron2417 {
                 }
                 Opcode::JNZ => {
                     if self.a != 0 {
-                        self.instruction_pointer = Some(operand as usize);
+                        self.instruction_pointer = operand as usize;
                         return;
                     }
                 }
@@ -114,16 +115,12 @@ impl Tritron2417 {
                     self.c = self.a >> operand;
                 }
             }
-            if ptr + 2 == self.rom.len() {
-                self.instruction_pointer = None
-            } else {
-                self.instruction_pointer = Some(ptr + 2);
-            }
+            self.instruction_pointer += 2;
         }
     }
 
     fn run_until_halt(&mut self) {
-        while self.instruction_pointer.is_some() {
+        while self.instruction_pointer < self.rom.len() {
             self.cycle();
         }
     }
@@ -150,7 +147,7 @@ fn search_start_value(input: &Tritron2417, from_pos: usize, a_base: usize) -> Op
         let mut tritron = input.clone();
         tritron.a = e;
         tritron.run_until_halt();
-        if tritron.output == &input.rom[from_pos..] {
+        if tritron.output == input.rom[from_pos..] {
             // println!("SUCC({from_pos}) {e:b} gives {:?}, descending", &tritron.output);
             if from_pos == 0 {
                 return Some(e);
