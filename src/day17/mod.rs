@@ -124,6 +124,14 @@ impl Tritron2417 {
             self.cycle();
         }
     }
+
+    fn reset(&mut self, a: usize, b: usize, c: usize) {
+        self.instruction_pointer = 0;
+        self.a = a;
+        self.b = b;
+        self.c = c;
+        self.output.clear();
+    }
 }
 
 #[aoc(day17, part1)]
@@ -142,17 +150,16 @@ fn one(input: &Tritron2417) -> String {
     s
 }
 
-fn search_start_value(input: &Tritron2417, from_pos: usize, a_base: usize) -> Option<usize> {
-    for e in a_base..(a_base + 8) {
-        let mut tritron = input.clone();
-        tritron.a = e;
+fn search_start_value(tritron: &mut Tritron2417, from_pos: usize, a_base: usize) -> Option<usize> {
+    for a in a_base..(a_base + 8) {
+        tritron.reset(a, 0, 0);
         tritron.run_until_halt();
-        if tritron.output == input.rom[from_pos..] {
+        if tritron.output == tritron.rom[from_pos..] {
             // println!("SUCC({from_pos}) {e:b} gives {:?}, descending", &tritron.output);
             if from_pos == 0 {
-                return Some(e);
+                return Some(a);
             }
-            if let Some(res) = search_start_value(input, from_pos - 1, e << 3) {
+            if let Some(res) = search_start_value(tritron, from_pos - 1, a << 3) {
                 return Some(res);
             }
         }
@@ -163,11 +170,9 @@ fn search_start_value(input: &Tritron2417, from_pos: usize, a_base: usize) -> Op
 
 #[aoc(day17, part2)]
 fn two(input: &Tritron2417) -> usize {
-    // Assumptions: program ends with ADV 3, OUT _, JNZ 0 and has no other JNZs, OUTs, or ADVs.
-    let res = search_start_value(input, input.rom.len() - 1, 0).expect("solution not found");
     let mut tritron = input.clone();
-    tritron.a = res;
-    tritron.run_until_halt();
+    // Assumptions: program ends with ADV 3, OUT _, JNZ 0 and has no other JNZs, OUTs, or ADVs.
+    let res = search_start_value(&mut tritron, input.rom.len() - 1, 0).expect("solution not found");
     res
 }
 
