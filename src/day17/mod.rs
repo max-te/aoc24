@@ -1,4 +1,5 @@
 use aoc_runner_derive::{aoc, aoc_generator};
+use smallvec::SmallVec;
 
 use crate::util::{parse_digit, parse_initial_digits};
 
@@ -11,7 +12,7 @@ struct Tritron2417<'p> {
     rom: &'p [u8],
 }
 
-type Input = (usize, usize, usize, Vec<u8>);
+type Input = (usize, usize, usize, SmallVec<[u8; 16]>);
 
 #[aoc_generator(day17)]
 fn parse(input: &[u8]) -> Input {
@@ -22,7 +23,7 @@ fn parse(input: &[u8]) -> Input {
     let input = &input[num_len + const { "\nRegister C: ".len() }..];
     let (c, num_len) = parse_initial_digits(input);
     let input = &input[num_len + const { "\n\nProgram: ".len() }..];
-    let mut program = Vec::with_capacity(input.len() / 2);
+    let mut program = SmallVec::new();
     for i in (0..input.len()).step_by(2) {
         program.push(parse_digit(&input[i]));
     }
