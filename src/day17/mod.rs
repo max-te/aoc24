@@ -3,16 +3,18 @@ use aoc_runner_derive::{aoc, aoc_generator};
 use crate::util::{parse_digit, parse_initial_digits};
 
 #[derive(Debug, Clone)]
-struct Tritron2417 {
+struct Tritron2417<'p> {
     instruction_pointer: usize,
     a: usize,
     b: usize,
     c: usize,
-    rom: Vec<u8>,
+    rom: &'p [u8],
 }
 
+type Input = (usize, usize, usize, Vec<u8>);
+
 #[aoc_generator(day17)]
-fn parse(input: &[u8]) -> Tritron2417 {
+fn parse(input: &[u8]) -> Input {
     let input = &input[const { "Register A: ".len() }..];
     let (a, num_len) = parse_initial_digits(input);
     let input = &input[num_len + const { "\nRegister B: ".len() }..];
@@ -25,13 +27,7 @@ fn parse(input: &[u8]) -> Tritron2417 {
         program.push(parse_digit(&input[i]));
     }
 
-    Tritron2417 {
-        instruction_pointer: 0,
-        a: a as usize,
-        b: b as usize,
-        c: c as usize,
-        rom: program,
-    }
+    (a as usize, b as usize, c as usize, program)
 }
 
 #[repr(u8)]
@@ -62,7 +58,7 @@ impl Opcode {
     }
 }
 
-impl Tritron2417 {
+impl<'p> Tritron2417<'p> {
     #[inline(always)]
     fn eval_combo_operand(&self, operand: u8) -> usize {
         match operand {
@@ -143,9 +139,15 @@ impl Tritron2417 {
 }
 
 #[aoc(day17, part1)]
-fn one(input: &Tritron2417) -> String {
-    let mut res = String::with_capacity(input.rom.len() * 2);
-    let mut tritron = input.clone();
+fn one((a, b, c, program): &Input) -> String {
+    let mut res = String::with_capacity(program.len() * 2);
+    let mut tritron = Tritron2417 {
+        rom: program,
+        instruction_pointer: 0,
+        a: *a,
+        b: *b,
+        c: *c,
+    };
     while let Some(out) = tritron.run_until_next_output() {
         res.push(char::from_u32((out + b'0') as u32).unwrap());
         res.push(',');
@@ -178,11 +180,17 @@ fn search_start_value(tritron: &mut Tritron2417, from_pos: usize, a_base: usize)
 }
 
 #[aoc(day17, part2)]
-fn two(input: &Tritron2417) -> usize {
-    let mut tritron = input.clone();
+fn two((_, _, _, program): &Input) -> usize {
+    let mut tritron = Tritron2417 {
+        rom: program,
+        instruction_pointer: 0,
+        a: 0,
+        b: 0,
+        c: 0,
+    };
     // Assumptions: program ends with ADV 3, OUT _, JNZ 0 and has no other JNZs, OUTs, or ADVs.
-    let res = search_start_value(&mut tritron, input.rom.len() - 1, 0).expect("solution not found");
-    res
+    // B & C always start at 0.
+    search_start_value(&mut tritron, program.len() - 1, 0).expect("solution not found")
 }
 
 pub fn part1(puzzle: &str) -> String {
