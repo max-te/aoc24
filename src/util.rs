@@ -54,13 +54,13 @@ impl<'this, T> Iterator for VecVecIter<'this, T> {
 pub fn parse_2_digits(digits: &[u8]) -> u8 {
     debug_assert!(digits.len() == 2);
     debug_assert!(digits[0].is_ascii_digit() && digits[1].is_ascii_digit());
-    (digits[0] - '0' as u8) * 10 + digits[1] - '0' as u8
+    (digits[0] - b'0') * 10 + digits[1] - b'0'
 }
 
 #[inline]
 pub fn parse_digit(digit: &u8) -> u8 {
     debug_assert!(digit.is_ascii_digit());
-    digit - '0' as u8
+    digit - b'0'
 }
 
 #[inline]
