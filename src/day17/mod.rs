@@ -9,7 +9,6 @@ struct Tritron2417 {
     b: usize,
     c: usize,
     rom: Vec<u8>,
-    output: Vec<u8>,
 }
 
 #[aoc_generator(day17)]
@@ -32,7 +31,6 @@ fn parse(input: &[u8]) -> Tritron2417 {
         b: b as usize,
         c: c as usize,
         rom: program,
-        output: Vec::with_capacity(input.len()),
     }
 }
 
@@ -76,7 +74,7 @@ impl Tritron2417 {
         }
     }
 
-    fn cycle(&mut self) {
+    fn cycle(&mut self) -> Option<u8> {
         if self.instruction_pointer < self.rom.len() {
             let opcode: Opcode = Opcode::from_u8(self.rom[self.instruction_pointer]);
             let operand = self.rom[self.instruction_pointer + 1];
@@ -96,7 +94,7 @@ impl Tritron2417 {
                 Opcode::JNZ => {
                     if self.a != 0 {
                         self.instruction_pointer = operand as usize;
-                        return;
+                        return None;
                     }
                 }
                 Opcode::BXC => {
@@ -104,7 +102,8 @@ impl Tritron2417 {
                 }
                 Opcode::OUT => {
                     let operand = self.eval_combo_operand(operand);
-                    self.output.push((operand % 8) as u8);
+                    self.instruction_pointer += 2;
+                    return Some(operand as u8 % 8);
                 }
                 Opcode::BDV => {
                     let operand = self.eval_combo_operand(operand);
@@ -117,6 +116,7 @@ impl Tritron2417 {
             }
             self.instruction_pointer += 2;
         }
+        None
     }
 
     fn run_until_halt(&mut self) {
@@ -127,11 +127,8 @@ impl Tritron2417 {
 
     fn run_until_next_output(&mut self) -> Option<u8> {
         while self.instruction_pointer < self.rom.len() {
-            if self.rom[self.instruction_pointer] != Opcode::OUT as u8 {
-                self.cycle();
-            } else {
-                self.cycle();
-                return self.output.last().copied();
+            if let Some(out) = self.cycle() {
+                return Some(out);
             }
         }
         None
@@ -142,24 +139,19 @@ impl Tritron2417 {
         self.a = a;
         self.b = b;
         self.c = c;
-        self.output.clear();
     }
 }
 
 #[aoc(day17, part1)]
 fn one(input: &Tritron2417) -> String {
+    let mut res = String::with_capacity(input.rom.len() * 2);
     let mut tritron = input.clone();
-    tritron.run_until_halt();
-    let mut s = tritron.output.iter().fold(
-        String::with_capacity(tritron.output.len() * 2),
-        |mut s, n| {
-            s.push(char::from_digit(*n as u32, 10).unwrap());
-            s.push(',');
-            s
-        },
-    );
-    s.pop();
-    s
+    while let Some(out) = tritron.run_until_next_output() {
+        res.push(char::from_u32((out + b'0') as u32).unwrap());
+        res.push(',');
+    }
+    res.pop();
+    res
 }
 
 fn search_start_value(tritron: &mut Tritron2417, from_pos: usize, a_base: usize) -> Option<usize> {
