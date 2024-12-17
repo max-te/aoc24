@@ -125,6 +125,18 @@ impl Tritron2417 {
         }
     }
 
+    fn run_until_next_output(&mut self) -> Option<u8> {
+        while self.instruction_pointer < self.rom.len() {
+            if self.rom[self.instruction_pointer] != Opcode::OUT as u8 {
+                self.cycle();
+            } else {
+                self.cycle();
+                return self.output.last().copied();
+            }
+        }
+        None
+    }
+
     fn reset(&mut self, a: usize, b: usize, c: usize) {
         self.instruction_pointer = 0;
         self.a = a;
@@ -151,10 +163,15 @@ fn one(input: &Tritron2417) -> String {
 }
 
 fn search_start_value(tritron: &mut Tritron2417, from_pos: usize, a_base: usize) -> Option<usize> {
-    for a in a_base..(a_base + 8) {
+    'a: for a in a_base..(a_base + 8) {
         tritron.reset(a, 0, 0);
-        tritron.run_until_halt();
-        if tritron.output == tritron.rom[from_pos..] {
+        for i in from_pos..tritron.rom.len() {
+            let out = tritron.run_until_next_output();
+            if out != Some(tritron.rom[i]) {
+                continue 'a;
+            }
+        }
+        if tritron.run_until_next_output().is_none() {
             // println!("SUCC({from_pos}) {e:b} gives {:?}, descending", &tritron.output);
             if from_pos == 0 {
                 return Some(a);
