@@ -4,7 +4,6 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
 use std::hash::Hash;
 
-type Output = usize;
 type Input = Vec<Point>;
 
 type Coord = u16;
@@ -28,17 +27,17 @@ fn parse(input: &str) -> Input {
 
 #[inline]
 #[aoc(day18, part1)]
-fn one(points: &[Point]) -> Output {
+fn one(points: &[Point]) -> Coord {
     one_inner::<70>(&points[..1024])
 }
 
 #[inline]
-fn one_inner<const SIZE: Coord>(points: &[Point]) -> Output {
+fn one_inner<const SIZE: Coord>(points: &[Point]) -> Coord {
     find_path_across::<SIZE>(points).unwrap().1
 }
 
 #[inline]
-fn find_path_across<const SIZE: Coord>(points: &[Point]) -> Option<(Vec<Point>, usize)> {
+fn find_path_across<const SIZE: Coord>(points: &[Point]) -> Option<(Vec<Point>, Coord)> {
     let obstacles = FxHashSet::from_iter(points);
     let start = Point(0, 0);
     dijkstra(
@@ -73,6 +72,49 @@ fn find_path_across<const SIZE: Coord>(points: &[Point]) -> Option<(Vec<Point>, 
             }
             neigh
         },
+        #[inline(always)]
+        |node| node.0 == SIZE && node.1 == SIZE,
+    )
+}
+
+#[inline]
+fn find_path_across_astar<const SIZE: Coord>(points: &[Point]) -> Option<(Vec<Point>, Coord)> {
+    let obstacles = FxHashSet::from_iter(points);
+    let start = Point(0, 0);
+    astar(
+        &start,
+        #[inline]
+        |node: &Point| {
+            let mut neigh = SmallVec::<[_; 4]>::new();
+            if node.1 < SIZE {
+                let south = Point(node.0, node.1 + 1);
+                if !obstacles.contains(&south) {
+                    neigh.push((south, 1));
+                }
+            }
+            if node.0 < SIZE {
+                let east = Point(node.0 + 1, node.1);
+                if !obstacles.contains(&east) {
+                    neigh.push((east, 1));
+                }
+            }
+            if node.1 > 0 {
+                let north = Point(node.0, node.1 - 1);
+                if !obstacles.contains(&north) {
+                    neigh.push((north, 1));
+                }
+            }
+
+            if node.0 > 0 {
+                let west = Point(node.0 - 1, node.1);
+                if !obstacles.contains(&west) {
+                    neigh.push((west, 1));
+                }
+            }
+            neigh
+        },
+        #[inline]
+        |node| 2 * SIZE - node.0 - node.1,
         #[inline(always)]
         |node| node.0 == SIZE && node.1 == SIZE,
     )
@@ -244,7 +286,16 @@ fn two_binary_search(points: &[Point]) -> String {
     format!("{},{}", solution.0, solution.1)
 }
 
-pub fn part1(puzzle: &str) -> usize {
+#[inline]
+#[aoc(day18, part2, binary_search_astar)]
+fn two_binary_search_astar(points: &[Point]) -> String {
+    let indexed = points.iter().enumerate().collect::<Vec<_>>();
+    let p = indexed.partition_point(|(i, _)| find_path_across_astar::<70>(&points[..*i]).is_some());
+    let solution = points[p - 1];
+    format!("{},{}", solution.0, solution.1)
+}
+
+pub fn part1(puzzle: &str) -> Coord {
     one(&parse(puzzle))
 }
 
