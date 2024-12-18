@@ -1,4 +1,5 @@
 use aoc_runner_derive::{aoc, aoc_generator};
+use itertools::Itertools;
 use pathfinding::{directed::dijkstra::dijkstra, prelude::astar};
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
@@ -132,6 +133,49 @@ fn find_path_across_astar<const SIZE: Coord>(points: &[Point]) -> Option<(Vec<Po
         },
         #[inline]
         |node| 2 * SIZE - node.0 - node.1,
+        #[inline(always)]
+        |node| node.0 == SIZE && node.1 == SIZE,
+    )
+}
+
+#[inline]
+fn find_path_across_map<const SIZE: Coord>(
+    obstacles: &FxHashMap<&Point, usize>,
+    time: usize,
+) -> Option<(Vec<Point>, Coord)> {
+    let start = Point(0, 0);
+    dijkstra(
+        &start,
+        #[inline]
+        |node: &Point| {
+            let mut neigh = SmallVec::<[_; 4]>::new();
+            if node.1 < SIZE {
+                let south = Point(node.0, node.1 + 1);
+                if !obstacles.get(&south).is_some_and(|t| *t < time) {
+                    neigh.push((south, 1));
+                }
+            }
+            if node.0 < SIZE {
+                let east = Point(node.0 + 1, node.1);
+                if !obstacles.get(&east).is_some_and(|t| *t < time) {
+                    neigh.push((east, 1));
+                }
+            }
+            if node.1 > 0 {
+                let north = Point(node.0, node.1 - 1);
+                if !obstacles.get(&north).is_some_and(|t| *t < time) {
+                    neigh.push((north, 1));
+                }
+            }
+
+            if node.0 > 0 {
+                let west = Point(node.0 - 1, node.1);
+                if !obstacles.get(&west).is_some_and(|t| *t < time) {
+                    neigh.push((west, 1));
+                }
+            }
+            neigh
+        },
         #[inline(always)]
         |node| node.0 == SIZE && node.1 == SIZE,
     )
@@ -304,6 +348,16 @@ fn two_binary_search(points: &[Point]) -> String {
 }
 
 #[inline]
+#[aoc(day18, part2, binary_search_map)]
+fn two_binary_search_map(points: &[Point]) -> String {
+    let time = (0..points.len()).collect_vec(); // TODO: Implement bare binary search
+    let drop_time = FxHashMap::from_iter(points.iter().enumerate().map(|(i, p)| (p, i)));
+    let p = time.partition_point(|t| find_path_across_map::<70>(&drop_time, *t).is_some());
+    let solution = points[p - 1];
+    format!("{},{}", solution.0, solution.1)
+}
+
+#[inline]
 #[aoc(day18, part2, binary_search_astar)]
 fn two_binary_search_astar(points: &[Point]) -> String {
     let indexed = points.iter().enumerate().collect::<Vec<_>>();
@@ -317,7 +371,7 @@ pub fn part1(puzzle: &str) -> Coord {
 }
 
 pub fn part2(puzzle: &str) -> String {
-    two_binary_search(&parse(puzzle))
+    two_binary_search_map(&parse(puzzle))
 }
 
 #[cfg(test)]
