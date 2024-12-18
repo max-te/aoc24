@@ -121,7 +121,7 @@ fn find_path_across_astar<const SIZE: Coord>(points: &[Point]) -> Option<(Vec<Po
 }
 
 #[inline]
-#[aoc(day18, part2, dijkstra)]
+#[aoc(day18, part2, blockade_dijkstra)]
 fn two(points: &[Point]) -> String {
     let solution = two_inner::<70>(points);
     format!("{},{}", solution.0, solution.1)
@@ -195,7 +195,7 @@ fn two_inner<const SIZE: Coord>(points: &[Point]) -> Point {
 }
 
 #[inline]
-#[aoc(day18, part2, astar)]
+#[aoc(day18, part2, blockade_astar)]
 fn two_astar(points: &[Point]) -> String {
     let solution = two_inner_astar::<70>(points);
     format!("{},{}", solution.0, solution.1)
