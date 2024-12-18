@@ -7,7 +7,7 @@ use std::hash::Hash;
 type Output = usize;
 type Input = Vec<Point>;
 
-type Coord = u32;
+type Coord = u16;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Point(Coord, Coord);
 
@@ -26,11 +26,13 @@ fn parse(input: &str) -> Input {
         .collect()
 }
 
+#[inline]
 #[aoc(day18, part1)]
 fn one(points: &[Point]) -> Output {
     one_inner::<70>(&points[..1024])
 }
 
+#[inline]
 fn one_inner<const SIZE: Coord>(points: &[Point]) -> Output {
     let obstacles = FxHashSet::from_iter(points);
     let start = Point(0, 0);
@@ -74,12 +76,14 @@ fn one_inner<const SIZE: Coord>(points: &[Point]) -> Output {
     res.1
 }
 
+#[inline]
 #[aoc(day18, part2)]
 fn two(points: &[Point]) -> String {
     let solution = two_inner::<70>(points);
     format!("{},{}", solution.0, solution.1)
 }
 
+#[inline]
 fn two_inner<const SIZE: Coord>(points: &[Point]) -> Point {
     let drop_time = FxHashMap::from_iter(points.iter().enumerate().map(|(i, p)| (p, i)));
 
@@ -144,6 +148,14 @@ fn two_inner<const SIZE: Coord>(points: &[Point]) -> Point {
     dbg!(&res);
 
     points[res.1].clone()
+}
+
+pub fn part1(puzzle: &str) -> usize {
+    one(&parse(puzzle))
+}
+
+pub fn part2(puzzle: &str) -> String {
+    two(&parse(puzzle))
 }
 
 #[cfg(test)]
