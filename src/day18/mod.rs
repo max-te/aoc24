@@ -1,5 +1,5 @@
 use aoc_runner_derive::{aoc, aoc_generator};
-use pathfinding::directed::dijkstra::dijkstra;
+use pathfinding::{directed::dijkstra::dijkstra, prelude::astar};
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
 use std::hash::Hash;
@@ -77,7 +77,7 @@ fn one_inner<const SIZE: Coord>(points: &[Point]) -> Output {
 }
 
 #[inline]
-#[aoc(day18, part2)]
+#[aoc(day18, part2, dijkstra)]
 fn two(points: &[Point]) -> String {
     let solution = two_inner::<70>(points);
     format!("{},{}", solution.0, solution.1)
@@ -150,6 +150,89 @@ fn two_inner<const SIZE: Coord>(points: &[Point]) -> Point {
     points[res.1].clone()
 }
 
+#[inline]
+#[aoc(day18, part2, astar)]
+fn two_astar(points: &[Point]) -> String {
+    let solution = two_inner_astar::<70>(points);
+    format!("{},{}", solution.0, solution.1)
+}
+
+#[inline]
+fn two_inner_astar<const SIZE: Coord>(points: &[Point]) -> Point {
+    let drop_time = FxHashMap::from_iter(points.iter().enumerate().map(|(i, p)| (p, i)));
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    enum Node {
+        Spacetime(usize, Point),
+        Waiting(usize),
+    }
+    let start = Node::Waiting(0);
+    #[cfg(test)]
+    dbg!(&points);
+
+    let res = astar(
+        &start,
+        #[inline]
+        |node| {
+            let mut neigh = SmallVec::<[(Node, usize); 10]>::new();
+            match node {
+                Node::Spacetime(time, tile) => {
+                    for (dx, dy) in [
+                        (-1, -1),
+                        (-1, 0),
+                        (-1, 1),
+                        (0, 1),
+                        (1, 1),
+                        (1, 0),
+                        (1, -1),
+                        (0, -1),
+                    ] {
+                        let adj_tile = Point(
+                            tile.0.wrapping_add_signed(dx),
+                            tile.1.wrapping_add_signed(dy),
+                        );
+                        if drop_time.get(&adj_tile).is_some_and(|t| t <= time) {
+                            neigh.push((Node::Spacetime(*time, adj_tile), 1));
+                            #[cfg(test)]
+                            println!("From {tile:?} @ {time} to {adj_tile:?}.");
+                        }
+                    }
+                    if *time < points.len() {
+                        neigh.push((Node::Spacetime(*time + 1, *tile), 1 << 16));
+                    }
+                }
+                Node::Waiting(time) => {
+                    if *time < points.len() {
+                        let new_point = points[*time];
+                        if new_point.0 == 0 || new_point.1 == SIZE {
+                            neigh.push((Node::Spacetime(*time, new_point), 1));
+                        }
+                        neigh.push((Node::Waiting(time + 1), 1 << 16));
+                    }
+                }
+            }
+            neigh
+        },
+        #[inline]
+        |node| {
+            match node {
+                Node::Spacetime(_, point) => (SIZE - point.0).max(point.1) as usize,
+                Node::Waiting(_) => 2, // = min length of a diagonal wall
+            }
+        },
+        #[inline]
+        |node| match node {
+            Node::Spacetime(_, point) => point.0 == SIZE || point.1 == 0,
+            Node::Waiting(_) => false,
+        },
+    )
+    .unwrap();
+    #[cfg(debug_assertions)]
+    dbg!(&res);
+
+    points[res.1 >> 16].clone()
+}
+
 pub fn part1(puzzle: &str) -> usize {
     one(&parse(puzzle))
 }
@@ -171,6 +254,12 @@ mod examples {
     #[test]
     fn example2() {
         let res = two_inner::<6>(&parse(include_str!("test.txt")));
+        assert_eq!(res, Point(6, 1));
+    }
+
+    #[test]
+    fn example2_astar() {
+        let res = two_inner_astar::<6>(&parse(include_str!("test.txt")));
         assert_eq!(res, Point(6, 1));
     }
 }
