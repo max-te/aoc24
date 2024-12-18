@@ -34,9 +34,14 @@ fn one(points: &[Point]) -> Output {
 
 #[inline]
 fn one_inner<const SIZE: Coord>(points: &[Point]) -> Output {
+    find_path_across::<SIZE>(points).unwrap().1
+}
+
+#[inline]
+fn find_path_across<const SIZE: Coord>(points: &[Point]) -> Option<(Vec<Point>, usize)> {
     let obstacles = FxHashSet::from_iter(points);
     let start = Point(0, 0);
-    let res = dijkstra(
+    dijkstra(
         &start,
         #[inline]
         |node: &Point| {
@@ -71,9 +76,6 @@ fn one_inner<const SIZE: Coord>(points: &[Point]) -> Output {
         #[inline(always)]
         |node| node.0 == SIZE && node.1 == SIZE,
     )
-    .unwrap();
-
-    res.1
 }
 
 #[inline]
@@ -233,12 +235,21 @@ fn two_inner_astar<const SIZE: Coord>(points: &[Point]) -> Point {
     points[res.1 >> 16].clone()
 }
 
+#[inline]
+#[aoc(day18, part2, binary_search)]
+fn two_binary_search(points: &[Point]) -> String {
+    let indexed = points.iter().enumerate().collect::<Vec<_>>();
+    let p = indexed.partition_point(|(i, _)| find_path_across::<70>(&points[..*i]).is_some());
+    let solution = points[p - 1];
+    format!("{},{}", solution.0, solution.1)
+}
+
 pub fn part1(puzzle: &str) -> usize {
     one(&parse(puzzle))
 }
 
 pub fn part2(puzzle: &str) -> String {
-    two(&parse(puzzle))
+    two_binary_search(&parse(puzzle))
 }
 
 #[cfg(test)]
