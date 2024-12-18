@@ -51,7 +51,7 @@ fn one_inner<const SIZE: Coord>(points: &[Point]) -> Coord {
 #[inline]
 #[aoc(day18, part1, astar)]
 fn one_astar(points: &[Point]) -> Coord {
-    find_path_across::<70>(&points[..1024]).unwrap().1
+    find_path_across_astar::<70>(&points[..1024]).unwrap().1
 }
 
 #[inline]
