@@ -350,10 +350,22 @@ fn two_binary_search(points: &[Point]) -> String {
 #[inline]
 #[aoc(day18, part2, binary_search_map)]
 fn two_binary_search_map(points: &[Point]) -> String {
-    let time = (0..points.len()).collect_vec(); // TODO: Implement bare binary search
     let drop_time = FxHashMap::from_iter(points.iter().enumerate().map(|(i, p)| (p, i)));
-    let p = time.partition_point(|t| find_path_across_map::<70>(&drop_time, *t).is_some());
-    let solution = points[p - 1];
+
+    let mut base = 1024; // From part 1
+    let mut size = points.len() - base;
+
+    while size > 1 {
+        let half = size / 2;
+        let mid = base + half;
+
+        let can_cross = find_path_across_map::<70>(&drop_time, mid).is_some();
+        base = if can_cross { mid } else { base };
+
+        size -= half;
+    }
+
+    let solution = points[base];
     format!("{},{}", solution.0, solution.1)
 }
 
