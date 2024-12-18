@@ -4,6 +4,8 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
 use std::hash::Hash;
 
+use crate::util::parse_initial_digits;
+
 type Input = Vec<Point>;
 
 type Coord = u16;
@@ -16,13 +18,22 @@ impl Hash for Point {
     }
 }
 
+#[inline]
 #[aoc_generator(day18)]
 fn parse(input: &str) -> Input {
-    input
-        .lines()
-        .filter_map(|l| l.split_once(','))
-        .map(|(a, b)| Point(a.parse().unwrap(), b.parse().unwrap()))
-        .collect()
+    let mut input = input.as_bytes();
+    let mut points = Vec::<Point>::with_capacity(input.len() / 4);
+    while !input.is_empty() {
+        let (x, num_len) = parse_initial_digits(input);
+        input = &input[num_len + 1..];
+        let (y, num_len) = parse_initial_digits(input);
+        points.push(Point(x as u16, y as u16));
+        input = &input[num_len..];
+        if !input.is_empty() {
+            input = &input[1..];
+        }
+    }
+    points
 }
 
 #[inline]
