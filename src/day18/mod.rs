@@ -37,6 +37,12 @@ fn one_inner<const SIZE: Coord>(points: &[Point]) -> Coord {
 }
 
 #[inline]
+#[aoc(day18, part1, astar)]
+fn one_astar(points: &[Point]) -> Coord {
+    find_path_across::<70>(&points[..1024]).unwrap().1
+}
+
+#[inline]
 fn find_path_across<const SIZE: Coord>(points: &[Point]) -> Option<(Vec<Point>, Coord)> {
     let obstacles = FxHashSet::from_iter(points);
     let start = Point(0, 0);
@@ -296,7 +302,7 @@ fn two_binary_search_astar(points: &[Point]) -> String {
 }
 
 pub fn part1(puzzle: &str) -> Coord {
-    one(&parse(puzzle))
+    one_astar(&parse(puzzle))
 }
 
 pub fn part2(puzzle: &str) -> String {
