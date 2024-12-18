@@ -379,7 +379,7 @@ fn two_binary_search_astar(points: &[Point]) -> String {
 }
 
 pub fn part1(puzzle: &str) -> Coord {
-    one_astar(&parse(puzzle))
+    one(&parse(puzzle))
 }
 
 pub fn part2(puzzle: &str) -> String {
