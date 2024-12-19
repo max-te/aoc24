@@ -98,15 +98,48 @@ fn towels_can_form_design(towels: &[Towel], design: &[u8]) -> bool {
     }
 }
 
+#[derive(Debug, Clone)]
+struct PrefixTowelsIterator<'t, 'm> {
+    towels: &'t [Towel],
+    needle: &'m [u8],
+    position: usize,
+}
+
+impl<'t, 'm> Iterator for PrefixTowelsIterator<'t, 'm> {
+    type Item = &'t Towel;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.towels.is_empty() || self.needle.is_empty() {
+            None
+        } else {
+            let (head, new_needle) = self.needle.split_at(1);
+            let head = head[0];
+            self.needle = new_needle;
+            let base = self
+                .towels
+                .partition_point(|t| t.get(self.position).is_none_or(|x| *x < head));
+            let size = self.towels[base..].partition_point(|t| t.get(self.position) == Some(&head));
+            self.towels = &self.towels[base..(base + size)];
+            self.position += 1;
+            let front_towel = self.towels.get(0)?;
+            if front_towel.len() == self.position {
+                Some(&front_towel)
+            } else {
+                self.next()
+            }
+        }
+    }
+}
+
 fn initial_matching_towels<'a>(
     towels: &'a [Towel],
     design: &'a [u8],
 ) -> impl Iterator<Item = &'a Towel> {
-    let base = towels.partition_point(|t| t[0] < design[0]);
-    let size = towels[base..].partition_point(|t| t[0] == design[0]);
-    towels[base..(base + size)]
-        .iter()
-        .filter(|t| design.starts_with(&t))
+    PrefixTowelsIterator {
+        towels,
+        needle: &design,
+        position: 0,
+    }
 }
 
 #[aoc(day19, part2)]
