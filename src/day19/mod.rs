@@ -4,10 +4,9 @@ use aoc_runner_derive::{aoc, aoc_generator};
 use arrayvec::ArrayVec;
 use itertools::Itertools;
 use rustc_hash::FxHashMap;
-use smallvec::SmallVec;
 
 type Towel = ArrayVec<u8, 8>;
-type Design = SmallVec<[u8; 64]>;
+type Design = ArrayVec<u8, 64>;
 type Input = (Vec<Towel>, Vec<Design>);
 
 #[aoc_generator(day19)]
@@ -26,7 +25,7 @@ fn parse(input: &str) -> Input {
     let _empty_line = lines.next();
     let mut designs = Vec::new();
     for design in lines {
-        designs.push(SmallVec::from_slice(design));
+        designs.push(ArrayVec::try_from(design).unwrap());
     }
 
     (towels, designs)
@@ -57,12 +56,12 @@ fn one<'i>((towels, designs): &'i Input) -> usize {
 fn towels_can_form_design_memo(
     towels: &[Towel],
     design: &[u8],
-    memo: &mut FxHashMap<SmallVec<[u8; 64]>, bool>,
+    memo: &mut FxHashMap<Design, bool>,
 ) -> bool {
     if design.is_empty() {
         true
     } else {
-        if design.len() > 16 {
+        if design.len() > 40 {
             for next_towel in initial_matching_towels(towels, design) {
                 if towels_can_form_design_memo(towels, &design[next_towel.len()..], memo) {
                     return true;
@@ -73,7 +72,7 @@ fn towels_can_form_design_memo(
         if let Some(res) = memo.get(design) {
             return *res;
         } else {
-            let key = SmallVec::from_slice(design);
+            let key = Design::try_from(design).unwrap();
             for next_towel in initial_matching_towels(towels, design) {
                 if towels_can_form_design_memo(towels, &design[next_towel.len()..], memo) {
                     memo.insert(key, true);
@@ -110,8 +109,46 @@ fn initial_matching_towels<'a>(
         .filter(|t| design.starts_with(&t))
 }
 
+#[aoc(day19, part2)]
+fn two((towels, designs): &Input) -> usize {
+    let towels = towels.iter().cloned().sorted().collect_vec();
+    let mut memo = FxHashMap::default();
+
+    designs
+        .iter()
+        .map(|design| count_towels_can_form_design_memo(&towels, design, &mut memo))
+        .sum()
+}
+
+fn count_towels_can_form_design_memo(
+    towels: &[Towel],
+    design: &[u8],
+    memo: &mut FxHashMap<Design, usize>,
+) -> usize {
+    if design.is_empty() {
+        1
+    } else {
+        if let Some(res) = memo.get(design) {
+            return *res;
+        } else {
+            let key = Design::try_from(design).unwrap();
+            let mut count = 0;
+            for next_towel in initial_matching_towels(towels, design) {
+                count +=
+                    count_towels_can_form_design_memo(towels, &design[next_towel.len()..], memo)
+            }
+            memo.insert(key, count);
+            return count;
+        }
+    }
+}
+
 pub fn part1(puzzle: &str) -> usize {
     one(&parse(puzzle))
+}
+
+pub fn part2(puzzle: &str) -> usize {
+    two(&parse(puzzle))
 }
 
 #[cfg(test)]
@@ -122,5 +159,10 @@ mod examples {
     fn example1() {
         let res = part1(&include_str!("test.txt"));
         assert_eq!(res, 6);
+    }
+    #[test]
+    fn example2() {
+        let res = part2(&include_str!("test.txt"));
+        assert_eq!(res, 16);
     }
 }
