@@ -32,7 +32,7 @@ fn parse(input: &str) -> Input {
 }
 
 #[aoc(day19, part1)]
-fn one<'i>((towels, designs): &'i Input) -> usize {
+fn one((towels, designs): &Input) -> usize {
     let towels = towels.iter().sorted_by_key(|t| t.len());
     let mut neccessary_towels = Vec::with_capacity(towels.len());
     for towel in towels {
@@ -51,6 +51,39 @@ fn one<'i>((towels, designs): &'i Input) -> usize {
         .iter()
         .filter(|design| towels_can_form_design_memo(&towels, *design, &mut memo))
         .count()
+}
+
+#[aoc(day19, part1, forward_counting)]
+fn one_forward_counting((towels, designs): &Input) -> usize {
+    let towels = towels.iter().sorted_by_key(|t| t.len());
+    let mut neccessary_towels = Vec::with_capacity(towels.len());
+    for towel in towels {
+        if !(towels_can_form_design(&neccessary_towels, towel)) {
+            neccessary_towels.insert(
+                neccessary_towels.binary_search(towel).unwrap_err(),
+                towel.clone(),
+            );
+        }
+    }
+    let towels = neccessary_towels;
+
+    let mut res = 0;
+    let mut possible;
+    for design in designs {
+        possible = [false; 100];
+        possible[0] = true;
+        for pos in 0..design.len() {
+            if possible[pos] {
+                for towel in initial_matching_towels(&towels, &design[pos..]) {
+                    possible[pos + towel.len()] = true;
+                }
+            }
+        }
+        if possible[design.len()] {
+            res += 1
+        };
+    }
+    res
 }
 
 fn towels_can_form_design_memo(
@@ -176,12 +209,32 @@ fn count_towels_can_form_design_memo(
     }
 }
 
+#[aoc(day19, part2, forward_counting)]
+fn two_forward_counting((towels, designs): &Input) -> usize {
+    let towels = towels.iter().cloned().sorted().collect_vec();
+    let mut res = 0;
+    let mut possibilities;
+    for design in designs {
+        possibilities = [0; 100];
+        possibilities[0] = 1;
+        for pos in 0..design.len() {
+            if possibilities[pos] > 0 {
+                for towel in initial_matching_towels(&towels, &design[pos..]) {
+                    possibilities[pos + towel.len()] += possibilities[pos];
+                }
+            }
+        }
+        res += possibilities[design.len()];
+    }
+    res
+}
+
 pub fn part1(puzzle: &str) -> usize {
-    one(&parse(puzzle))
+    one_forward_counting(&parse(puzzle))
 }
 
 pub fn part2(puzzle: &str) -> usize {
-    two(&parse(puzzle))
+    two_forward_counting(&parse(puzzle))
 }
 
 #[cfg(test)]
