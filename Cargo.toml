@@ -15,6 +15,7 @@ harness = false
 [dependencies]
 aoc-runner = "0.3.0"
 aoc-runner-derive = "0.3.0"
+arrayvec = "0.7.6"
 indexmap = "2.7.0"
 itertools = "0.13.0"
 num-rational = "0.4.2"
