@@ -1,16 +1,17 @@
 use aoc_runner_derive::{aoc, aoc_generator};
 use itertools::Itertools;
 use pathfinding::{directed::dijkstra::dijkstra, prelude::astar};
+use petgraph::{csr::IndexType, unionfind::UnionFind};
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
-use std::hash::Hash;
+use std::{cmp::Ordering, hash::Hash};
 
 use crate::util::parse_initial_digits;
 
 type Input = Vec<Point>;
 
 type Coord = u16;
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct Point(Coord, Coord);
 
 impl Hash for Point {
@@ -378,12 +379,141 @@ fn two_binary_search_astar(points: &[Point]) -> String {
     format!("{},{}", solution.0, solution.1)
 }
 
+#[aoc(day18, part2, union_find)]
+fn two_union_find(points: &[Point]) -> String {
+    #[cfg(test)]
+    const SIZE: Coord = 6;
+    #[cfg(not(test))]
+    const SIZE: Coord = 70;
+
+    #[derive(Debug, Clone, Copy, Hash, Default, PartialEq, Eq)]
+    enum Node {
+        #[default]
+        LowerLeft,
+        Tile(Point),
+        UpperRight,
+    }
+
+    impl Node {
+        const MAX: usize = ((SIZE + 1) * (SIZE + 1)) as usize - 1;
+
+        fn neighbors(&self) -> SmallVec<[Self; 8]> {
+            match self {
+                Node::Tile(point) => {
+                    let mut neigh = SmallVec::new();
+                    for (dx, dy) in [
+                        (-1, -1),
+                        (-1, 0),
+                        (-1, 1),
+                        (0, 1),
+                        (1, 1),
+                        (1, 0),
+                        (1, -1),
+                        (0, -1),
+                    ] {
+                        let p = Point(
+                            point.0.wrapping_add_signed(dx),
+                            point.1.wrapping_add_signed(dy),
+                        );
+                        if (p.0 > 0 || p.1 > 0)
+                            && (p.0 < SIZE || p.1 < SIZE)
+                            && (p.0 <= SIZE && p.1 <= SIZE)
+                        {
+                            neigh.push(Node::Tile(p))
+                        }
+                    }
+                    if point.0 == 0 || point.1 == SIZE {
+                        neigh.push(Node::LowerLeft);
+                    } else if point.0 == SIZE || point.1 == 0 {
+                        neigh.push(Node::UpperRight);
+                    }
+                    neigh
+                }
+                _ => SmallVec::new(),
+            }
+        }
+    }
+
+    impl PartialOrd for Node {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            Some(self.cmp(other))
+        }
+    }
+
+    impl Ord for Node {
+        fn cmp(&self, other: &Self) -> Ordering {
+            match (self, other) {
+                (Node::LowerLeft, Node::LowerLeft) => Ordering::Equal,
+                (Node::LowerLeft, Node::Tile(_)) => Ordering::Less,
+                (Node::LowerLeft, Node::UpperRight) => Ordering::Less,
+                (Node::Tile(_), Node::LowerLeft) => Ordering::Greater,
+                (Node::Tile(point), Node::Tile(other)) => {
+                    (point.1, point.0).cmp(&(other.1, other.0))
+                }
+                (Node::Tile(_), Node::UpperRight) => Ordering::Less,
+                (Node::UpperRight, Node::LowerLeft) => Ordering::Greater,
+                (Node::UpperRight, Node::Tile(_)) => Ordering::Greater,
+                (Node::UpperRight, Node::UpperRight) => Ordering::Equal,
+            }
+        }
+    }
+
+    unsafe impl IndexType for Node {
+        fn new(x: usize) -> Self {
+            match x {
+                0 => Node::LowerLeft,
+                Self::MAX => Node::UpperRight,
+                x @ _ => {
+                    let p = Point(x as Coord % (SIZE + 1), x as Coord / (SIZE + 1));
+                    debug_assert!(p.0 > 0 || p.1 > 0, "Top-left corner is reserved");
+                    debug_assert!(p.0 < SIZE || p.1 < SIZE, "Bottom-right corner is reserved");
+                    debug_assert!(
+                        p.0 <= SIZE && p.1 <= SIZE,
+                        "Coordinates {p:?} should be within field"
+                    );
+                    Node::Tile(p)
+                }
+            }
+        }
+
+        fn index(&self) -> usize {
+            match self {
+                Node::LowerLeft => 0,
+                Node::Tile(point) => (point.0 + point.1 * (SIZE + 1)) as usize,
+                Node::UpperRight => Self::MAX,
+            }
+        }
+
+        fn max() -> Self {
+            Self::UpperRight
+        }
+    }
+
+    let mut blockage: UnionFind<Node> = UnionFind::new(Node::MAX + 1);
+    let mut has_dropped = FxHashSet::default();
+    has_dropped.insert(Node::LowerLeft);
+    has_dropped.insert(Node::UpperRight);
+    for new_p in points {
+        let node = Node::Tile(*new_p);
+        for neighbor in node.neighbors() {
+            if has_dropped.contains(&neighbor) {
+                blockage.union(node, neighbor);
+            }
+        }
+        if blockage.equiv(Node::LowerLeft, Node::UpperRight) {
+            return format!("{},{}", new_p.0, new_p.1);
+        }
+        has_dropped.insert(node);
+    }
+    panic!("No solution found")
+}
+
 pub fn part1(puzzle: &str) -> Coord {
     one(&parse(puzzle))
 }
 
 pub fn part2(puzzle: &str) -> String {
-    two_binary_search_map(&parse(puzzle))
+    two_union_find(&parse(puzzle))
 }
 
 #[cfg(test)]
@@ -406,5 +536,10 @@ mod examples {
     fn example2_astar() {
         let res = two_inner_astar::<6>(&parse(include_str!("test.txt")));
         assert_eq!(res, Point(6, 1));
+    }
+    #[test]
+    fn example2_uf() {
+        let res = two_union_find(&parse(include_str!("test.txt")));
+        assert_eq!(res, "6,1");
     }
 }
