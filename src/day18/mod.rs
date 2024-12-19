@@ -1,5 +1,8 @@
 use aoc_runner_derive::{aoc, aoc_generator};
-use pathfinding::{directed::dijkstra::dijkstra, prelude::astar};
+use pathfinding::{
+    directed::{bfs::bfs, dijkstra::dijkstra},
+    prelude::astar,
+};
 use petgraph::{csr::IndexType, unionfind::UnionFind};
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
@@ -39,13 +42,13 @@ fn parse(input: &str) -> Input {
 
 #[inline]
 #[aoc(day18, part1)]
-fn one(points: &[Point]) -> Coord {
+fn one(points: &[Point]) -> usize {
     one_inner::<70>(&points[..1024])
 }
 
 #[inline]
-fn one_inner<const SIZE: Coord>(points: &[Point]) -> Coord {
-    find_path_across::<SIZE>(points).unwrap().1
+fn one_inner<const SIZE: Coord>(points: &[Point]) -> usize {
+    find_path_across::<SIZE>(points).unwrap().len() - 1
 }
 
 #[inline]
@@ -55,10 +58,10 @@ fn one_astar(points: &[Point]) -> Coord {
 }
 
 #[inline]
-fn find_path_across<const SIZE: Coord>(points: &[Point]) -> Option<(Vec<Point>, Coord)> {
+fn find_path_across<const SIZE: Coord>(points: &[Point]) -> Option<Vec<Point>> {
     let obstacles = FxHashSet::from_iter(points);
     let start = Point(0, 0);
-    dijkstra(
+    bfs(
         &start,
         #[inline]
         |node: &Point| {
@@ -66,26 +69,26 @@ fn find_path_across<const SIZE: Coord>(points: &[Point]) -> Option<(Vec<Point>, 
             if node.1 < SIZE {
                 let south = Point(node.0, node.1 + 1);
                 if !obstacles.contains(&south) {
-                    neigh.push((south, 1));
+                    neigh.push(south);
                 }
             }
             if node.0 < SIZE {
                 let east = Point(node.0 + 1, node.1);
                 if !obstacles.contains(&east) {
-                    neigh.push((east, 1));
+                    neigh.push(east);
                 }
             }
             if node.1 > 0 {
                 let north = Point(node.0, node.1 - 1);
                 if !obstacles.contains(&north) {
-                    neigh.push((north, 1));
+                    neigh.push(north);
                 }
             }
 
             if node.0 > 0 {
                 let west = Point(node.0 - 1, node.1);
                 if !obstacles.contains(&west) {
-                    neigh.push((west, 1));
+                    neigh.push(west);
                 }
             }
             neigh
@@ -142,9 +145,9 @@ fn find_path_across_astar<const SIZE: Coord>(points: &[Point]) -> Option<(Vec<Po
 fn find_path_across_map<const SIZE: Coord>(
     obstacles: &FxHashMap<&Point, usize>,
     time: usize,
-) -> Option<(Vec<Point>, Coord)> {
+) -> Option<Vec<Point>> {
     let start = Point(0, 0);
-    dijkstra(
+    bfs(
         &start,
         #[inline]
         |node: &Point| {
@@ -152,26 +155,26 @@ fn find_path_across_map<const SIZE: Coord>(
             if node.1 < SIZE {
                 let south = Point(node.0, node.1 + 1);
                 if !obstacles.get(&south).is_some_and(|t| *t < time) {
-                    neigh.push((south, 1));
+                    neigh.push(south);
                 }
             }
             if node.0 < SIZE {
                 let east = Point(node.0 + 1, node.1);
                 if !obstacles.get(&east).is_some_and(|t| *t < time) {
-                    neigh.push((east, 1));
+                    neigh.push(east);
                 }
             }
             if node.1 > 0 {
                 let north = Point(node.0, node.1 - 1);
                 if !obstacles.get(&north).is_some_and(|t| *t < time) {
-                    neigh.push((north, 1));
+                    neigh.push(north);
                 }
             }
 
             if node.0 > 0 {
                 let west = Point(node.0 - 1, node.1);
                 if !obstacles.get(&west).is_some_and(|t| *t < time) {
-                    neigh.push((west, 1));
+                    neigh.push(west);
                 }
             }
             neigh
@@ -511,7 +514,7 @@ fn two_union_find(points: &[Point]) -> String {
     panic!("No solution found")
 }
 
-pub fn part1(puzzle: &str) -> Coord {
+pub fn part1(puzzle: &str) -> usize {
     one(&parse(puzzle))
 }
 
