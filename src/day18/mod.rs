@@ -1,5 +1,4 @@
 use aoc_runner_derive::{aoc, aoc_generator};
-use itertools::Itertools;
 use pathfinding::{directed::dijkstra::dijkstra, prelude::astar};
 use petgraph::{csr::IndexType, unionfind::UnionFind};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -397,6 +396,7 @@ fn two_union_find(points: &[Point]) -> String {
     impl Node {
         const MAX: usize = ((SIZE + 1) * (SIZE + 1)) as usize - 1;
 
+        #[inline]
         fn neighbors(&self) -> SmallVec<[Self; 8]> {
             match self {
                 Node::Tile(point) => {
@@ -435,30 +435,31 @@ fn two_union_find(points: &[Point]) -> String {
     }
 
     impl PartialOrd for Node {
+        #[inline]
         fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
             Some(self.cmp(other))
         }
     }
 
     impl Ord for Node {
+        #[inline]
         fn cmp(&self, other: &Self) -> Ordering {
             match (self, other) {
                 (Node::LowerLeft, Node::LowerLeft) => Ordering::Equal,
-                (Node::LowerLeft, Node::Tile(_)) => Ordering::Less,
-                (Node::LowerLeft, Node::UpperRight) => Ordering::Less,
+                (Node::LowerLeft, _) => Ordering::Less,
                 (Node::Tile(_), Node::LowerLeft) => Ordering::Greater,
                 (Node::Tile(point), Node::Tile(other)) => {
                     (point.1, point.0).cmp(&(other.1, other.0))
                 }
                 (Node::Tile(_), Node::UpperRight) => Ordering::Less,
-                (Node::UpperRight, Node::LowerLeft) => Ordering::Greater,
-                (Node::UpperRight, Node::Tile(_)) => Ordering::Greater,
                 (Node::UpperRight, Node::UpperRight) => Ordering::Equal,
+                (Node::UpperRight, _) => Ordering::Greater,
             }
         }
     }
 
     unsafe impl IndexType for Node {
+        #[inline]
         fn new(x: usize) -> Self {
             match x {
                 0 => Node::LowerLeft,
@@ -476,6 +477,7 @@ fn two_union_find(points: &[Point]) -> String {
             }
         }
 
+        #[inline]
         fn index(&self) -> usize {
             match self {
                 Node::LowerLeft => 0,
@@ -484,26 +486,27 @@ fn two_union_find(points: &[Point]) -> String {
             }
         }
 
+        #[inline]
         fn max() -> Self {
             Self::UpperRight
         }
     }
 
     let mut blockage: UnionFind<Node> = UnionFind::new(Node::MAX + 1);
-    let mut has_dropped = FxHashSet::default();
-    has_dropped.insert(Node::LowerLeft);
-    has_dropped.insert(Node::UpperRight);
+    let mut has_dropped = vec![false; Node::MAX + 1];
+    has_dropped[Node::LowerLeft.index()] = true;
+    has_dropped[Node::UpperRight.index()] = true;
     for new_p in points {
         let node = Node::Tile(*new_p);
         for neighbor in node.neighbors() {
-            if has_dropped.contains(&neighbor) {
+            if has_dropped[neighbor.index()] {
                 blockage.union(node, neighbor);
             }
         }
         if blockage.equiv(Node::LowerLeft, Node::UpperRight) {
             return format!("{},{}", new_p.0, new_p.1);
         }
-        has_dropped.insert(node);
+        has_dropped[node.index()] = true;
     }
     panic!("No solution found")
 }
