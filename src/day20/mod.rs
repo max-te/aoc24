@@ -209,6 +209,14 @@ fn two(input: &Input) -> usize {
     two_inner(input, 100)
 }
 
+pub fn part1(puzzle: &str) -> usize {
+    one(&parse(puzzle))
+}
+
+pub fn part2(puzzle: &str) -> usize {
+    two(&parse(puzzle))
+}
+
 #[cfg(test)]
 mod examples {
     use itertools::Itertools;
