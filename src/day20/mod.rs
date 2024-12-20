@@ -84,9 +84,45 @@ fn one_inner((map, start, finish): &Input, min_save: usize) -> usize {
     shortcuts
 }
 
-#[aoc(day20, part1)]
+fn one_inner_dual((map, start, finish): &Input, min_save: usize) -> usize {
+    let track = bfs(
+        start,
+        |t| {
+            map.neighbours(*t, false)
+                .filter(|t| matches!(map[*t], Tile::Track(_)))
+        },
+        |t| t == finish,
+    )
+    .unwrap();
+    let mut shortcuts = 0;
+    let min_save_with_cost = min_save + 2;
+
+    for (t_from, pos_from) in track[..(track.len() - min_save_with_cost)]
+        .iter()
+        .enumerate()
+    {
+        for pos_to in &track[t_from + min_save_with_cost..] {
+            if manhattan(*pos_from, *pos_to) == 2 {
+                shortcuts += 1;
+            }
+        }
+    }
+    shortcuts
+}
+
+#[inline]
+fn manhattan(pos_from: (usize, usize), pos_to: (usize, usize)) -> usize {
+    pos_from.0.abs_diff(pos_to.0) + pos_from.1.abs_diff(pos_to.1)
+}
+
+#[aoc(day20, part1, naive)]
 fn one(input: &Input) -> usize {
     one_inner(input, 100)
+}
+
+#[aoc(day20, part1, dual)]
+fn one_dual(input: &Input) -> usize {
+    one_inner_dual(input, 100)
 }
 
 #[cfg(test)]
@@ -96,6 +132,12 @@ mod examples {
     #[test]
     fn example1() {
         let res = one_inner(&parse(include_str!("test.txt")), 20);
+        assert_eq!(res, 5);
+    }
+
+    #[test]
+    fn example1_dual() {
+        let res = one_inner_dual(&parse(include_str!("test.txt")), 20);
         assert_eq!(res, 5);
     }
 }
