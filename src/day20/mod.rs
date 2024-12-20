@@ -139,35 +139,83 @@ const fn manhattan_diamond<const RADIUS: usize, const LEN: usize>() -> [(isize, 
     out
 }
 
+const fn const_concat<const LEN1: usize, const LEN2: usize, const LEN_SUM: usize>(
+    a: [(isize, isize); LEN1],
+    b: [(isize, isize); LEN2],
+) -> [(isize, isize); LEN_SUM] {
+    assert!(LEN1 + LEN2 == LEN_SUM);
+    let mut out = [(0, 0); LEN_SUM];
+    let mut i = 0;
+    while i < LEN1 {
+        out[i] = a[i];
+        i += 1;
+    }
+    while i < LEN_SUM {
+        out[i] = b[i - LEN1];
+        i += 1;
+    }
+    out
+}
+
+const fn const_bubble_sort<const LEN: usize>(a: [(isize, isize); LEN]) -> [(isize, isize); LEN] {
+    let mut out = a;
+    let mut i = 0;
+    while i < LEN {
+        let mut j = i + 1;
+        while j < LEN {
+            if out[j].0 < out[i].0 || (out[j].0 == out[i].0 && out[j].1 < out[i].1) {
+                let tmp = out[i];
+                out[i] = out[j];
+                out[j] = tmp;
+            }
+            j += 1;
+        }
+        i += 1;
+    }
+    out
+}
+
+const fn precompute_lengths<const LEN: usize>(
+    a: [(isize, isize); LEN],
+) -> [((isize, isize), usize); LEN] {
+    let mut out = [((0, 0), 0); LEN];
+    let mut i = 0;
+    while i < LEN {
+        out[i] = (a[i], (a[i].0.abs() + a[i].1.abs()) as usize);
+        i += 1;
+    }
+    out
+}
+
 macro_rules! make_manhattan_diamond {
     ($radius:expr) => {
-        manhattan_diamond::<$radius, { 4 * $radius }>()
+        const_bubble_sort(manhattan_diamond::<$radius, { 4 * $radius }>())
     };
 }
 
-const MANHATTAN_DIAMONDS: [&[(isize, isize)]; 21] = [
-    &[(0, 0)],
-    &make_manhattan_diamond!(1),
-    &make_manhattan_diamond!(2),
-    &make_manhattan_diamond!(3),
-    &make_manhattan_diamond!(4),
-    &make_manhattan_diamond!(5),
-    &make_manhattan_diamond!(6),
-    &make_manhattan_diamond!(7),
-    &make_manhattan_diamond!(8),
-    &make_manhattan_diamond!(9),
-    &make_manhattan_diamond!(10),
-    &make_manhattan_diamond!(11),
-    &make_manhattan_diamond!(12),
-    &make_manhattan_diamond!(13),
-    &make_manhattan_diamond!(14),
-    &make_manhattan_diamond!(15),
-    &make_manhattan_diamond!(16),
-    &make_manhattan_diamond!(17),
-    &make_manhattan_diamond!(18),
-    &make_manhattan_diamond!(19),
-    &make_manhattan_diamond!(20),
-];
+macro_rules! sum_varargs {
+    ($summand:expr) => {
+        $summand
+    };
+    ($summand:expr, $($rest:expr),+) => {
+        ($summand + sum_varargs!($($rest),+))
+    }
+}
+
+macro_rules! make_manhattan_diamonds {
+    ($radius:expr) => {
+        make_manhattan_diamond!($radius)
+    };
+    ($radius:expr, $($rest:expr),+) => {
+        const_concat::<{ 4 * $radius}, { 4 * sum_varargs!($($rest),+) }, { 4 * sum_varargs!($radius, $($rest),+) }>(make_manhattan_diamond!($radius), make_manhattan_diamonds!($($rest),+))
+    }
+}
+
+const LONG_SHORTCUTS: &[((isize, isize), usize)] = const {
+    &precompute_lengths(const_bubble_sort(make_manhattan_diamonds!(
+        2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+    )))
+};
 
 fn two_inner((map, start, finish): &Input, min_save: usize) -> usize {
     let mut map = map.clone();
@@ -184,20 +232,18 @@ fn two_inner((map, start, finish): &Input, min_save: usize) -> usize {
 
     for (time, pos) in track.iter().enumerate() {
         map[*pos] = Tile::Track(time);
-        for cheat_duration in 2..=20 {
-            for target in MANHATTAN_DIAMONDS[cheat_duration]
-                .iter()
-                .filter_map(|dir| map.move_in_direction(*pos, *dir))
-            {
-                if let Tile::Track(target_time) = map[target] {
-                    if time.saturating_sub(target_time) >= cheat_duration + min_save {
-                        #[cfg(test)]
-                        eprintln!(
-                        "{cheat_duration}-Shortcut to {pos:?} from {target:?} to time {time} from {target_time}"
-                    );
-                        shortcuts += 1;
-                    };
-                }
+        for (target, cheat_duration) in LONG_SHORTCUTS
+            .iter()
+            .filter_map(|(dir, len)| map.move_in_direction(*pos, *dir).map(|t| (t, *len)))
+        {
+            if let Tile::Track(target_time) = map[target] {
+                if time.saturating_sub(target_time) >= cheat_duration as usize + min_save {
+                    #[cfg(test)]
+                    eprintln!(
+                    "{cheat_duration}-Shortcut to {pos:?} from {target:?} to time {time} from {target_time}"
+                );
+                    shortcuts += 1;
+                };
             }
         }
     }
