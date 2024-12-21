@@ -7,11 +7,11 @@ use rustc_hash::FxHashMap;
 type Input = [[u8; 4]; 5];
 
 pub fn part1(puzzle: &str) -> u64 {
-    one_code_lut_simd(puzzle)
+    one_code_lut(puzzle)
 }
 
 pub fn part2(puzzle: &str) -> u64 {
-    two_code_lut_simd(puzzle)
+    two_code_lut(puzzle)
 }
 
 #[aoc_generator(day21, part1, naive)]
@@ -611,7 +611,7 @@ fn one_code_lut(input: &str) -> u64 {
 
 #[inline]
 #[aoc(day21, part2, code_lut)]
-fn two_code_lut(input: &str) -> usize {
+fn two_code_lut(input: &str) -> u64 {
     let input = input.as_bytes();
     let mut res: u64 = 0;
     let lut = const { build_code_lut(25) };
@@ -625,7 +625,7 @@ fn two_code_lut(input: &str) -> usize {
         };
         res = unsafe { res.unchecked_add(*lut.get_unchecked(code_lut_idx(code))) };
     }
-    res as usize
+    res
 }
 
 #[inline]
