@@ -563,6 +563,12 @@ pub fn one_num_lut(input: &str) -> usize {
     res
 }
 
+#[inline]
+const fn code_lut_idx(code: [u8; 3]) -> usize {
+    (code[0]) as usize * 100 + (code[1]) as usize * 10 + (code[2]) as usize
+        - const { b'0' as usize * 111 }
+}
+
 const fn build_code_lut(dpad_depth: usize) -> [usize; 1000] {
     let mut code_lut = [0; 1000];
     let numpad_lut = build_numpad_lut(dpad_depth);
@@ -574,7 +580,7 @@ const fn build_code_lut(dpad_depth: usize) -> [usize; 1000] {
             b'A',
         ];
         let move_count = input_code_numpad_lut(code, &numpad_lut);
-        code_lut[code_num] = move_count * code_num;
+        code_lut[code_lut_idx([code[0], code[1], code[2]])] = move_count * code_num;
 
     });
     code_lut
@@ -587,15 +593,8 @@ fn one_code_lut(input: &str) -> usize {
     let mut res = 0;
     let lut = const { build_code_lut(2) };
     for i in 0..5 {
-        let code = [
-            input[i * 5],
-            input[i * 5 + 1],
-            input[i * 5 + 2],
-            input[i * 5 + 3],
-        ];
-        let code_num = code[0] as usize * 100 + code[1] as usize * 10 + code[2] as usize
-            - const { b'0' as usize * 111 };
-        res += lut[code_num];
+        let code = [input[i * 5], input[i * 5 + 1], input[i * 5 + 2]];
+        res += lut[code_lut_idx(code)];
     }
     res
 }
