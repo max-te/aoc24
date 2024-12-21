@@ -112,71 +112,78 @@ fn numpad_position(key: u8) -> (usize, usize) {
     }
 }
 
-fn numpad_moves(code: &[u8; 4]) -> ArrayVec<DPadPress, 20> {
+#[inline]
+fn numpad_one_move(from: u8, to: u8) -> ArrayVec<DPadPress, 5> {
     let mut moves = ArrayVec::new();
-    let mut pos = numpad_position(b'A');
-    for target_key in code {
-        let target_pos = numpad_position(*target_key);
+    let pos = numpad_position(from);
+    let target_pos = numpad_position(to);
+    let v_moves: &[DPadPress] = if target_pos.1 <= pos.1 {
+        match pos.1 - target_pos.1 {
+            0 => &[],
+            1 => &[DPadPress::Up],
+            2 => &[DPadPress::Up, DPadPress::Up],
+            3 => &[DPadPress::Up, DPadPress::Up, DPadPress::Up],
+            _ => unreachable!(),
+        }
+    } else {
+        match target_pos.1 - pos.1 {
+            1 => &[DPadPress::Down],
+            2 => &[DPadPress::Down, DPadPress::Down],
+            3 => &[DPadPress::Down, DPadPress::Down, DPadPress::Down],
+            _ => unreachable!(),
+        }
+    };
 
-        let v_moves: &[DPadPress] = if target_pos.1 <= pos.1 {
-            match pos.1 - target_pos.1 {
-                0 => &[],
-                1 => &[DPadPress::Up],
-                2 => &[DPadPress::Up, DPadPress::Up],
-                3 => &[DPadPress::Up, DPadPress::Up, DPadPress::Up],
-                _ => unreachable!(),
-            }
-        } else {
-            match target_pos.1 - pos.1 {
-                1 => &[DPadPress::Down],
-                2 => &[DPadPress::Down, DPadPress::Down],
-                3 => &[DPadPress::Down, DPadPress::Down, DPadPress::Down],
-                _ => unreachable!(),
-            }
-        };
+    // We want to get all the left moves out of the way first if at all possible
+    // then up/down, then right. Since every left move at stage 1 needs two left moves at stage 2,
+    // which we want to be sequential and not interleaved with other moves.
 
-        // We want to get all the left moves out of the way first if at all possible
-        // then up/down, then right. Since every left move at stage 1 needs two left moves at stage 2,
-        // which we want to be sequential and not interleaved with other moves.
-
-        if target_pos.0 > pos.0 {
-            if pos.0 == 0 && target_pos.1 == 3 {
-                // First right, so we don't crash
-                for _ in 0..target_pos.0 - pos.0 {
-                    moves.push(DPadPress::Right);
-                }
-                for v_move in v_moves {
-                    moves.push(*v_move);
-                }
-            } else {
-                // First vertical, then right
-                for v_move in v_moves {
-                    moves.push(*v_move);
-                }
-                for _ in 0..target_pos.0 - pos.0 {
-                    moves.push(DPadPress::Right);
-                }
+    if target_pos.0 > pos.0 {
+        if pos.0 == 0 && target_pos.1 == 3 {
+            // First right, so we don't crash
+            for _ in 0..target_pos.0 - pos.0 {
+                moves.push(DPadPress::Right);
             }
-        } else if pos.1 == 3 && target_pos.0 == 0 {
-            // First up, so we don't crash
             for v_move in v_moves {
                 moves.push(*v_move);
             }
-            for _ in 0..pos.0 - target_pos.0 {
-                moves.push(DPadPress::Left);
-            }
         } else {
-            // First left, then vertical
-            for _ in 0..pos.0 - target_pos.0 {
-                moves.push(DPadPress::Left);
-            }
+            // First vertical, then right
             for v_move in v_moves {
                 moves.push(*v_move);
+            }
+            for _ in 0..target_pos.0 - pos.0 {
+                moves.push(DPadPress::Right);
             }
         }
-        moves.push(DPadPress::Activate);
-        pos = target_pos;
+    } else if pos.1 == 3 && target_pos.0 == 0 {
+        // First up, so we don't crash
+        for v_move in v_moves {
+            moves.push(*v_move);
+        }
+        for _ in 0..pos.0 - target_pos.0 {
+            moves.push(DPadPress::Left);
+        }
+    } else {
+        // First left, then vertical
+        for _ in 0..pos.0 - target_pos.0 {
+            moves.push(DPadPress::Left);
+        }
+        for v_move in v_moves {
+            moves.push(*v_move);
+        }
     }
+    moves
+}
+
+fn numpad_moves(code: &[u8; 4]) -> ArrayVec<DPadPress, 20> {
+    let mut moves = ArrayVec::new();
+    let mut prev_key = b'A';
+    for &target_key in code {
+        moves.extend(numpad_one_move(prev_key, target_key));
+        prev_key = target_key;
+    }
+    moves.push(DPadPress::Activate);
     moves
 }
 
