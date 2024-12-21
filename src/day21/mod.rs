@@ -160,72 +160,87 @@ fn numpad_moves(code: &[u8; 4]) -> Vec<DPadPress> {
     moves
 }
 
-fn dpad_one_move(from: DPadPress, to: DPadPress) -> Vec<DPadPress> {
-    let mut moves = Vec::new();
-
-    moves.extend_from_slice(match (from, to) {
-        (DPadPress::Up, DPadPress::Up) => &[],
-        (DPadPress::Up, DPadPress::Down) => unreachable!(),
-        (DPadPress::Up, DPadPress::Left) => &[DPadPress::Down, DPadPress::Left],
-        (DPadPress::Up, DPadPress::Right) => &[DPadPress::Down, DPadPress::Right],
-        (DPadPress::Up, DPadPress::Activate) => &[DPadPress::Right],
-        (DPadPress::Down, DPadPress::Up) => unreachable!(),
-        (DPadPress::Down, DPadPress::Down) => &[],
-        (DPadPress::Down, DPadPress::Left) => &[DPadPress::Left],
-        (DPadPress::Down, DPadPress::Right) => &[DPadPress::Right],
-        (DPadPress::Down, DPadPress::Activate) => &[DPadPress::Up, DPadPress::Right],
-        (DPadPress::Left, DPadPress::Up) => &[DPadPress::Right, DPadPress::Up],
-        (DPadPress::Left, DPadPress::Down) => &[DPadPress::Right],
-        (DPadPress::Left, DPadPress::Left) => &[],
-        (DPadPress::Left, DPadPress::Right) => unreachable!(),
-        (DPadPress::Left, DPadPress::Activate) => {
-            &[DPadPress::Right, DPadPress::Right, DPadPress::Up]
+#[inline]
+const fn dpad_one_move(from: DPadPress, to: DPadPress) -> &'static [DPadPress] {
+    match (from, to) {
+        (DPadPress::Up, DPadPress::Up) => &[DPadPress::Activate],
+        (DPadPress::Up, DPadPress::Down) => &[DPadPress::Down, DPadPress::Activate],
+        (DPadPress::Up, DPadPress::Left) => {
+            &[DPadPress::Down, DPadPress::Left, DPadPress::Activate]
         }
-        (DPadPress::Right, DPadPress::Up) => &[DPadPress::Left, DPadPress::Up],
-        (DPadPress::Right, DPadPress::Down) => &[DPadPress::Left],
-        (DPadPress::Right, DPadPress::Left) => unreachable!(),
-        (DPadPress::Right, DPadPress::Right) => &[],
-        (DPadPress::Right, DPadPress::Activate) => &[DPadPress::Up],
-        (DPadPress::Activate, DPadPress::Up) => &[DPadPress::Left],
-        (DPadPress::Activate, DPadPress::Down) => &[DPadPress::Left, DPadPress::Down],
-        (DPadPress::Activate, DPadPress::Left) => {
-            &[DPadPress::Down, DPadPress::Left, DPadPress::Left]
+        (DPadPress::Up, DPadPress::Right) => {
+            &[DPadPress::Down, DPadPress::Right, DPadPress::Activate]
         }
-        (DPadPress::Activate, DPadPress::Right) => &[DPadPress::Down],
-        (DPadPress::Activate, DPadPress::Activate) => &[],
-    });
-    moves.push(DPadPress::Activate);
-
-    moves
+        (DPadPress::Up, DPadPress::Activate) => &[DPadPress::Right, DPadPress::Activate],
+        (DPadPress::Down, DPadPress::Up) => &[DPadPress::Up, DPadPress::Activate],
+        (DPadPress::Down, DPadPress::Down) => &[DPadPress::Activate],
+        (DPadPress::Down, DPadPress::Left) => &[DPadPress::Left, DPadPress::Activate],
+        (DPadPress::Down, DPadPress::Right) => &[DPadPress::Right, DPadPress::Activate],
+        (DPadPress::Down, DPadPress::Activate) => {
+            &[DPadPress::Up, DPadPress::Right, DPadPress::Activate]
+        }
+        (DPadPress::Left, DPadPress::Up) => &[DPadPress::Right, DPadPress::Up, DPadPress::Activate],
+        (DPadPress::Left, DPadPress::Down) => &[DPadPress::Right, DPadPress::Activate],
+        (DPadPress::Left, DPadPress::Left) => &[DPadPress::Activate],
+        (DPadPress::Left, DPadPress::Right) => {
+            &[DPadPress::Right, DPadPress::Right, DPadPress::Activate]
+        }
+        (DPadPress::Left, DPadPress::Activate) => &[
+            DPadPress::Right,
+            DPadPress::Right,
+            DPadPress::Up,
+            DPadPress::Activate,
+        ],
+        (DPadPress::Right, DPadPress::Up) => &[DPadPress::Left, DPadPress::Up, DPadPress::Activate],
+        (DPadPress::Right, DPadPress::Down) => &[DPadPress::Left, DPadPress::Activate],
+        (DPadPress::Right, DPadPress::Left) => {
+            &[DPadPress::Left, DPadPress::Left, DPadPress::Activate]
+        }
+        (DPadPress::Right, DPadPress::Right) => &[DPadPress::Activate],
+        (DPadPress::Right, DPadPress::Activate) => &[DPadPress::Up, DPadPress::Activate],
+        (DPadPress::Activate, DPadPress::Up) => &[DPadPress::Left, DPadPress::Activate],
+        (DPadPress::Activate, DPadPress::Down) => {
+            &[DPadPress::Left, DPadPress::Down, DPadPress::Activate]
+        }
+        (DPadPress::Activate, DPadPress::Left) => &[
+            DPadPress::Down,
+            DPadPress::Left,
+            DPadPress::Left,
+            DPadPress::Activate,
+        ],
+        (DPadPress::Activate, DPadPress::Right) => &[DPadPress::Down, DPadPress::Activate],
+        (DPadPress::Activate, DPadPress::Activate) => &[DPadPress::Activate],
+    }
 }
 
 fn dpad_moves(code: &[DPadPress]) -> Vec<DPadPress> {
     let mut moves = Vec::new();
     let mut prev_key = DPadPress::Activate;
     for target_key in code {
-        moves.append(&mut dpad_one_move(prev_key, *target_key));
+        moves.extend_from_slice(dpad_one_move(prev_key, *target_key));
         prev_key = *target_key;
     }
     moves
 }
 
 fn input_code(code: [u8; 4]) -> Vec<DPadPress> {
+    #[cfg(debug_assertions)]
     eprintln!("{}", String::from_utf8_lossy(&code));
     let stage1 = numpad_moves(&code);
+    #[cfg(debug_assertions)]
     for mov in stage1.iter() {
         print!("{mov}");
     }
-    println!("\n {} moves", stage1.len());
     let stage2 = dpad_moves(&stage1);
+    #[cfg(debug_assertions)]
     for mov in stage2.iter() {
         print!("{mov}");
     }
-    println!("\n {} moves", stage2.len());
     let stage3 = dpad_moves(&stage2);
+    #[cfg(debug_assertions)]
     for mov in stage3.iter() {
         print!("{mov}");
     }
-    println!("\n {} moves", stage3.len());
     stage3
 }
 
@@ -246,8 +261,8 @@ fn dpad_one_move_recursive(
             let mut len = 0;
             let mut last_pos = DPadPress::Activate;
             for next in path {
-                len += dpad_one_move_recursive(last_pos, next, depth - 1, memo);
-                last_pos = next;
+                len += dpad_one_move_recursive(last_pos, *next, depth - 1, memo);
+                last_pos = *next;
             }
             memo.insert(key, len);
             len
