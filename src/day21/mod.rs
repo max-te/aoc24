@@ -3,6 +3,14 @@ use rustc_hash::FxHashMap;
 
 type Input = [[u8; 4]; 5];
 
+pub fn part1(puzzle: &str) -> usize {
+    one_recursive(&parse(puzzle))
+}
+
+pub fn part2(puzzle: &str) -> usize {
+    two_lut(&parse(puzzle))
+}
+
 #[aoc_generator(day21)]
 pub fn parse(input: &str) -> Input {
     let input = input.as_bytes();
@@ -14,7 +22,7 @@ pub fn parse(input: &str) -> Input {
 }
 
 #[aoc(day21, part1, naive)]
-pub fn part1(input: &Input) -> usize {
+pub fn one(input: &Input) -> usize {
     let mut res = 0;
     for code in input {
         let move_count = input_code(*code).len();
@@ -27,7 +35,7 @@ pub fn part1(input: &Input) -> usize {
 }
 
 #[aoc(day21, part1, recursive)]
-pub fn part1_recursive(input: &Input) -> usize {
+pub fn one_recursive(input: &Input) -> usize {
     let mut res = 0;
     let mut memo = FxHashMap::default();
     for code in input {
@@ -41,7 +49,7 @@ pub fn part1_recursive(input: &Input) -> usize {
 }
 
 #[aoc(day21, part2, recursive)]
-pub fn part2(input: &Input) -> usize {
+pub fn two(input: &Input) -> usize {
     let mut res = 0;
     let mut memo = FxHashMap::default();
     for code in input {
@@ -268,7 +276,7 @@ fn input_code_recursive(
 }
 
 #[aoc(day21, part2, lut)]
-pub fn part2_lut(input: &Input) -> usize {
+pub fn two_lut(input: &Input) -> usize {
     let mut res = 0;
     let lut = build_dpad_lut(25);
     for code in input {
@@ -346,6 +354,18 @@ mod tests {
     #[test]
     fn test_part1() {
         let input = parse(include_str!("test.txt"));
-        assert_eq!(part1(&input), 126384);
+        assert_eq!(one(&input), 126384);
+    }
+
+    #[test]
+    fn test_pub_part1() {
+        let input = include_str!("test.txt");
+        assert_eq!(part1(input), 126384);
+    }
+
+    #[test]
+    fn test_pub_part2() {
+        let input = include_str!("test.txt");
+        assert_eq!(part2(input), 154115708116294);
     }
 }
