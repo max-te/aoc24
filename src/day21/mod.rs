@@ -1,4 +1,4 @@
-use std::ops::AddAssign;
+use std::arch::x86_64::*;
 
 use aoc_runner_derive::{aoc, aoc_generator};
 use arrayvec::ArrayVec;
@@ -6,12 +6,12 @@ use rustc_hash::FxHashMap;
 
 type Input = [[u8; 4]; 5];
 
-pub fn part1(puzzle: &str) -> usize {
-    one_code_lut(puzzle)
+pub fn part1(puzzle: &str) -> u64 {
+    one_code_lut_simd(puzzle)
 }
 
-pub fn part2(puzzle: &str) -> usize {
-    two_code_lut(puzzle)
+pub fn part2(puzzle: &str) -> u64 {
+    two_code_lut_simd(puzzle)
 }
 
 #[aoc_generator(day21, part1, naive)]
@@ -568,10 +568,10 @@ pub fn one_num_lut(input: &str) -> usize {
 #[inline]
 const fn code_lut_idx(code: [u8; 3]) -> usize {
     // ASCII digits are 011_0000 to 011_1001
-    ((code[0] as usize & 0b1111) << 8) ^ ((code[1] as usize) << 4) ^ (code[2] as usize)
+    ((code[1] as usize & 0b1111) << 8) ^ ((code[2] as usize) << 4) ^ (code[0] as usize) ^ 0b0011
 }
 
-const fn build_code_lut(dpad_depth: usize) -> [usize; 4096] {
+const fn build_code_lut(dpad_depth: usize) -> [u64; 4096] {
     let mut code_lut = [0; 4096];
     let numpad_lut = build_numpad_lut(dpad_depth);
     const_for!(code_num in (0)..(1000) => {
@@ -582,7 +582,7 @@ const fn build_code_lut(dpad_depth: usize) -> [usize; 4096] {
             b'A',
         ];
         let move_count = input_code_numpad_lut(code, &numpad_lut);
-        code_lut[code_lut_idx([code[0], code[1], code[2]])] = move_count * code_num;
+        code_lut[code_lut_idx([code[0], code[1], code[2]])] = (move_count * code_num) as u64;
 
     });
     code_lut
@@ -590,9 +590,9 @@ const fn build_code_lut(dpad_depth: usize) -> [usize; 4096] {
 
 #[inline]
 #[aoc(day21, part1, code_lut)]
-fn one_code_lut(input: &str) -> usize {
+fn one_code_lut(input: &str) -> u64 {
     let input = input.as_bytes();
-    let mut res: usize = 0;
+    let mut res: u64 = 0;
     let lut = const { build_code_lut(2) };
     for i in 0..5 {
         let code = unsafe {
@@ -602,7 +602,9 @@ fn one_code_lut(input: &str) -> usize {
                 *input.get_unchecked(i * 5 + 2),
             ]
         };
-        res = unsafe { res.unchecked_add(*lut.get_unchecked(code_lut_idx(code))) };
+        let code_lut_idx = code_lut_idx(code);
+        let code_score = unsafe { *lut.get_unchecked(code_lut_idx) };
+        res = unsafe { res.unchecked_add(code_score) };
     }
     res
 }
@@ -611,7 +613,7 @@ fn one_code_lut(input: &str) -> usize {
 #[aoc(day21, part2, code_lut)]
 fn two_code_lut(input: &str) -> usize {
     let input = input.as_bytes();
-    let mut res: usize = 0;
+    let mut res: u64 = 0;
     let lut = const { build_code_lut(25) };
     for i in 0..5 {
         let code = unsafe {
@@ -623,7 +625,50 @@ fn two_code_lut(input: &str) -> usize {
         };
         res = unsafe { res.unchecked_add(*lut.get_unchecked(code_lut_idx(code))) };
     }
-    res
+    res as usize
+}
+
+#[inline]
+fn code_lut_simd<const DEPTH: usize>(input: &str) -> u64 {
+    let input = input.as_bytes();
+    let lut = const { build_code_lut(DEPTH) }.as_ptr() as *const i64;
+
+    unsafe fn _mm256_hadd_epi64(a: __m256i) -> __m256i {
+        let shuf1 = _mm256_permute4x64_epi64::<0b00_01_10_11>(a);
+        let a = _mm256_add_epi64(a, shuf1);
+        let shuf2 = _mm256_permute4x64_epi64::<0b01_00_00_01>(a);
+        _mm256_add_epi64(a, shuf2)
+    }
+
+    unsafe {
+        let input_offsets = _mm256_set_epi32(0, 5, 10, 15, 20, 20, 20, 20);
+        let inputs = _mm256_i32gather_epi32::<1>(input.as_ptr() as *const i32, input_offsets);
+        // 0011 XXXX 0011 YYYY 0011 ZZZZ
+        let sh_inputs = _mm256_srli_epi32(inputs, 12);
+        // >>             0011 XXXX 0011
+        let input_indices = _mm256_xor_si256(inputs, sh_inputs);
+        let input_indices = _mm256_and_si256(input_indices, _mm256_set1_epi32(0b1111_1111_1111));
+        let indices_1_4 = _mm256_extracti128_si256::<1>(input_indices);
+        let scores_1_4 = _mm256_i32gather_epi64::<8>(lut, indices_1_4);
+        let score_1_4 = _mm256_hadd_epi64(scores_1_4);
+
+        let indices_5_7 = _mm256_extracti128_si256::<0>(input_indices);
+        let scores_5_7 = _mm256_i32gather_epi64::<8>(lut, indices_5_7);
+        let score = _mm256_add_epi64(scores_5_7, score_1_4);
+        std::mem::transmute::<i64, u64>(_mm256_extract_epi64(score, 3))
+    }
+}
+
+#[inline]
+#[aoc(day21, part1, code_lut_simd)]
+fn one_code_lut_simd(input: &str) -> u64 {
+    code_lut_simd::<2>(input)
+}
+
+#[inline]
+#[aoc(day21, part2, code_lut_simd)]
+fn two_code_lut_simd(input: &str) -> u64 {
+    code_lut_simd::<25>(input)
 }
 
 #[cfg(test)]
