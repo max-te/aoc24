@@ -1,3 +1,5 @@
+use std::ops::AddAssign;
+
 use aoc_runner_derive::{aoc, aoc_generator};
 use arrayvec::ArrayVec;
 use rustc_hash::FxHashMap;
@@ -566,7 +568,7 @@ pub fn one_num_lut(input: &str) -> usize {
 #[inline]
 const fn code_lut_idx(code: [u8; 3]) -> usize {
     // ASCII digits are 011_0000 to 011_1001
-    (((code[0] as usize) << 8) ^ ((code[1] as usize) << 4) ^ (code[2] as usize)) & 0b1111_1111_1111
+    ((code[0] as usize & 0b1111) << 8) ^ ((code[1] as usize) << 4) ^ (code[2] as usize)
 }
 
 const fn build_code_lut(dpad_depth: usize) -> [usize; 4096] {
@@ -590,11 +592,17 @@ const fn build_code_lut(dpad_depth: usize) -> [usize; 4096] {
 #[aoc(day21, part1, code_lut)]
 fn one_code_lut(input: &str) -> usize {
     let input = input.as_bytes();
-    let mut res = 0;
+    let mut res: usize = 0;
     let lut = const { build_code_lut(2) };
     for i in 0..5 {
-        let code = [input[i * 5], input[i * 5 + 1], input[i * 5 + 2]];
-        res += lut[code_lut_idx(code)];
+        let code = unsafe {
+            [
+                *input.get_unchecked(i * 5),
+                *input.get_unchecked(i * 5 + 1),
+                *input.get_unchecked(i * 5 + 2),
+            ]
+        };
+        res = unsafe { res.unchecked_add(*lut.get_unchecked(code_lut_idx(code))) };
     }
     res
 }
@@ -603,11 +611,17 @@ fn one_code_lut(input: &str) -> usize {
 #[aoc(day21, part2, code_lut)]
 fn two_code_lut(input: &str) -> usize {
     let input = input.as_bytes();
-    let mut res = 0;
+    let mut res: usize = 0;
     let lut = const { build_code_lut(25) };
     for i in 0..5 {
-        let code = [input[i * 5], input[i * 5 + 1], input[i * 5 + 2]];
-        res += lut[code_lut_idx(code)];
+        let code = unsafe {
+            [
+                *input.get_unchecked(i * 5),
+                *input.get_unchecked(i * 5 + 1),
+                *input.get_unchecked(i * 5 + 2),
+            ]
+        };
+        res = unsafe { res.unchecked_add(*lut.get_unchecked(code_lut_idx(code))) };
     }
     res
 }
