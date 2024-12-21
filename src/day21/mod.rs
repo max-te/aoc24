@@ -113,7 +113,7 @@ fn numpad_position(key: u8) -> (usize, usize) {
 }
 
 #[inline]
-fn numpad_one_move(from: u8, to: u8) -> ArrayVec<DPadPress, 5> {
+fn numpad_one_move(from: u8, to: u8) -> ArrayVec<DPadPress, 6> {
     let mut moves = ArrayVec::new();
     let pos = numpad_position(from);
     let target_pos = numpad_position(to);
@@ -173,17 +173,17 @@ fn numpad_one_move(from: u8, to: u8) -> ArrayVec<DPadPress, 5> {
             moves.push(*v_move);
         }
     }
+    moves.push(DPadPress::Activate);
     moves
 }
 
-fn numpad_moves(code: &[u8; 4]) -> ArrayVec<DPadPress, 20> {
+fn numpad_moves(code: &[u8; 4]) -> ArrayVec<DPadPress, 24> {
     let mut moves = ArrayVec::new();
     let mut prev_key = b'A';
     for &target_key in code {
         moves.extend(numpad_one_move(prev_key, target_key));
         prev_key = target_key;
     }
-    moves.push(DPadPress::Activate);
     moves
 }
 
