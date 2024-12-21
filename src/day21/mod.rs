@@ -137,21 +137,17 @@ fn numpad_moves(code: &[u8; 4]) -> Vec<DPadPress> {
                     moves.push(DPadPress::Right);
                 }
             }
-        } else if target_pos.0 < pos.0 {
-            if pos.1 == 3 && target_pos.0 == 0 {
-                // First up, so we don't crash
-                moves.extend_from_slice(v_moves);
-                for _ in 0..pos.0 - target_pos.0 {
-                    moves.push(DPadPress::Left);
-                }
-            } else {
-                // First left, then vertical
-                for _ in 0..pos.0 - target_pos.0 {
-                    moves.push(DPadPress::Left);
-                }
-                moves.extend_from_slice(v_moves);
+        } else if pos.1 == 3 && target_pos.0 == 0 {
+            // First up, so we don't crash
+            moves.extend_from_slice(v_moves);
+            for _ in 0..pos.0 - target_pos.0 {
+                moves.push(DPadPress::Left);
             }
         } else {
+            // First left, then vertical
+            for _ in 0..pos.0 - target_pos.0 {
+                moves.push(DPadPress::Left);
+            }
             moves.extend_from_slice(v_moves);
         }
         moves.push(DPadPress::Activate);
