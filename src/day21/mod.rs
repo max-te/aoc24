@@ -4,7 +4,7 @@ use rustc_hash::FxHashMap;
 type Input = [[u8; 4]; 5];
 
 pub fn part1(puzzle: &str) -> usize {
-    one_recursive(&parse(puzzle))
+    one_lut(&parse(puzzle))
 }
 
 pub fn part2(puzzle: &str) -> usize {
@@ -289,6 +289,20 @@ pub fn two_lut(input: &Input) -> usize {
     res
 }
 
+#[aoc(day21, part1, lut)]
+pub fn one_lut(input: &Input) -> usize {
+    let mut res = 0;
+    let lut = const { build_dpad_lut(2) };
+    for code in input {
+        let move_count = input_code_lut(*code, &lut);
+        let value = (code[0] - b'0') as usize * 100
+            + (code[1] - b'0') as usize * 10
+            + (code[2] - b'0') as usize;
+        res += value * move_count;
+    }
+    res
+}
+
 const fn dpad_lut_key(from: DPadPress, to: DPadPress) -> usize {
     from as usize * 5 + to as usize
 }
@@ -317,14 +331,14 @@ const fn build_dpad_lut(depth: usize) -> [usize; 25] {
     } else {
         let prev_lut = build_dpad_lut(depth - 1);
         const_for!(from_idx, from in DPadPress::values() => {
-        const_for!(to_idx, to in DPadPress::values() => {
-            let key = dpad_lut_key(from, to);
-            let path = dpad_one_move(from, to);
-            let mut last_pos = DPadPress::Activate;
-            const_for!(path_ix, next in path => {
-                lut[key] += prev_lut[dpad_lut_key(last_pos, next)];
-                last_pos = next;
-            })
+            const_for!(to_idx, to in DPadPress::values() => {
+                let key = dpad_lut_key(from, to);
+                let path = dpad_one_move(from, to);
+                let mut last_pos = DPadPress::Activate;
+                const_for!(path_ix, next in path => {
+                    lut[key] += prev_lut[dpad_lut_key(last_pos, next)];
+                    last_pos = next;
+                })
             })
         })
     }
