@@ -241,7 +241,7 @@ fn dpad_one_move_recursive(
     memo: &mut FxHashMap<(DPadPress, DPadPress, usize), usize>,
 ) -> usize {
     let path = dpad_one_move(from, to);
-    if depth == 0 {
+    if depth == 1 {
         path.len()
     } else {
         let key = (from, to, depth);
@@ -269,7 +269,7 @@ fn input_code_recursive(
     let mut len = 0;
     let mut last_pos = DPadPress::Activate;
     for next in numpad {
-        len += dpad_one_move_recursive(last_pos, next, dpad_count - 1, dpad_memo);
+        len += dpad_one_move_recursive(last_pos, next, dpad_count, dpad_memo);
         last_pos = next;
     }
     len
@@ -291,7 +291,7 @@ pub fn two_lut(input: &Input) -> usize {
 
 fn build_dpad_lut(depth: usize) -> FxHashMap<(DPadPress, DPadPress), usize> {
     let mut lut = FxHashMap::default();
-    if depth == 0 {
+    if depth == 1 {
         for &from in DPadPress::values() {
             for &to in DPadPress::values() {
                 let path = dpad_one_move(from, to);
