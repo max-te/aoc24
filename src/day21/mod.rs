@@ -671,6 +671,68 @@ fn two_code_lut_simd(input: &str) -> u64 {
     code_lut_simd::<25>(input)
 }
 
+const LUT_25: [u64; 4096] = build_code_lut(25);
+const LUT_2: [u64; 4096] = build_code_lut(2);
+
+#[target_feature(enable = "avx2")]
+#[inline]
+unsafe fn code_lut_simd_asm<const DEPTH: usize>(input: &str) -> u64 {
+    let input = input.as_ptr();
+    let lut = if DEPTH == 2 { &LUT_2 } else { &LUT_25 }.as_ptr();
+
+    unsafe {
+        let input_offsets = _mm256_set_epi32(0, 5, 10, 15, 20, 20, 20, 20);
+
+        let score: __m256i;
+        std::arch::asm!(
+            "vpcmpeqd {simd_tmp}, {simd_tmp}, {simd_tmp}", // set all to 1
+            "vpgatherdd {simd1}, ymmword ptr [{input}+{simd2}*1], {simd_tmp}",
+            "vpsrld {simd2}, {simd1}, 12",
+            "vpxor {simd1}, {simd2}, {simd1}",
+            "vpcmpeqd {simd_tmp}, {simd_tmp}, {simd_tmp}", // set all to 1 again, was cleared by gather
+            "vpsrld {simd2}, {simd_tmp}, {index_mask_shift}",
+            "vpand {simd1}, {simd2}, {simd1}",
+            "vextracti128 {indices1}, {simd1}, 1",
+            "vextracti128 {indices2}, {simd1}, 0",
+            "vpcmpeqd {simd_tmp}, {simd_tmp}, {simd_tmp}",
+            "vpcmpeqd {simd_tmp2}, {simd_tmp2}, {simd_tmp2}",
+            "vpgatherdq {simd1}, ymmword ptr [{lut}+{indices1}*8], {simd_tmp}",
+            "vpgatherdq {simd2}, ymmword ptr [{lut}+{indices2}*8], {simd_tmp2}",
+            "vpermq {simd_tmp}, {simd1}, {shuf1}",
+            "vpaddq {simd1}, {simd_tmp}, {simd1}",
+            "vpermq {simd_tmp}, {simd1}, {shuf2}",
+            "vpaddq {simd1}, {simd_tmp}, {simd1}",
+            "vpaddd {simd1}, {simd2}, {simd1}",
+
+            simd1 = out(ymm_reg) score,
+            lut = in(reg) lut,
+            input = in(reg) input,
+            simd2 = in(ymm_reg) input_offsets,
+            simd_tmp = out(ymm_reg) _,
+            simd_tmp2 = out(ymm_reg) _,
+            indices1 = out(xmm_reg) _,
+            indices2 = out(xmm_reg) _,
+            index_mask_shift = const 32 - 12,
+            shuf1 = const 0b00_01_10_11,
+            shuf2 = const 0b01_00_00_01,
+        );
+
+        std::mem::transmute::<i64, u64>(_mm256_extract_epi64(score, 3))
+    }
+}
+
+#[inline]
+#[aoc(day21, part1, code_lut_simd_asm)]
+fn one_code_lut_simd_asm(input: &str) -> u64 {
+    unsafe { code_lut_simd_asm::<2>(input) }
+}
+
+#[inline]
+#[aoc(day21, part2, code_lut_simd_asm)]
+fn two_code_lut_simd_asm(input: &str) -> u64 {
+    unsafe { code_lut_simd_asm::<25>(input) }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
