@@ -1,4 +1,5 @@
 use aoc_runner_derive::{aoc, aoc_generator};
+use rustc_hash::FxHashMap;
 
 type Input = [[u8; 4]; 5];
 
@@ -12,7 +13,7 @@ pub fn parse(input: &str) -> Input {
     result
 }
 
-#[aoc(day21, part1)]
+#[aoc(day21, part1, naive)]
 pub fn part1(input: &Input) -> usize {
     let mut res = 0;
     for code in input {
@@ -25,11 +26,12 @@ pub fn part1(input: &Input) -> usize {
     res
 }
 
-#[aoc(day21, part2)]
-pub fn part2(input: &Input) -> usize {
+#[aoc(day21, part1, recursive)]
+pub fn part1_recursive(input: &Input) -> usize {
     let mut res = 0;
+    let mut memo = FxHashMap::default();
     for code in input {
-        let move_count = input_code_25(*code).len();
+        let move_count = input_code_recursive(*code, 2, &mut memo);
         let value = (code[0] - b'0') as usize * 100
             + (code[1] - b'0') as usize * 10
             + (code[2] - b'0') as usize;
@@ -38,24 +40,21 @@ pub fn part2(input: &Input) -> usize {
     res
 }
 
-fn input_code_25(code: [u8; 4]) -> Vec<DPadPress> {
-    eprintln!("{}", String::from_utf8_lossy(&code));
-    let stage1 = numpad_moves(&code);
-    for mov in stage1.iter() {
-        print!("{mov}");
+#[aoc(day21, part2, recursive)]
+pub fn part2(input: &Input) -> usize {
+    let mut res = 0;
+    let mut memo = FxHashMap::default();
+    for code in input {
+        let move_count = input_code_recursive(*code, 25, &mut memo);
+        let value = (code[0] - b'0') as usize * 100
+            + (code[1] - b'0') as usize * 10
+            + (code[2] - b'0') as usize;
+        res += value * move_count;
     }
-    let mut stage = stage1;
-    for _ in 0..25 {
-        stage = dpad_moves(&stage);
-        todo!("This will blow up exponetially! Solve differently");
-        // for mov in stage.iter() {
-        //     print!("{mov}");
-        // }
-    }
-    stage
+    res
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum DPadPress {
     Up,
     Down,
@@ -161,48 +160,51 @@ fn numpad_moves(code: &[u8; 4]) -> Vec<DPadPress> {
     moves
 }
 
-fn dpad_position(key: DPadPress) -> (usize, usize) {
-    match key {
-        DPadPress::Up => (1, 0),
-        DPadPress::Activate => (2, 0),
+fn dpad_one_move(from: DPadPress, to: DPadPress) -> Vec<DPadPress> {
+    let mut moves = Vec::new();
 
-        DPadPress::Left => (0, 1),
-        DPadPress::Down => (1, 1),
-        DPadPress::Right => (2, 1),
-    }
+    moves.extend_from_slice(match (from, to) {
+        (DPadPress::Up, DPadPress::Up) => &[],
+        (DPadPress::Up, DPadPress::Down) => unreachable!(),
+        (DPadPress::Up, DPadPress::Left) => &[DPadPress::Down, DPadPress::Left],
+        (DPadPress::Up, DPadPress::Right) => &[DPadPress::Down, DPadPress::Right],
+        (DPadPress::Up, DPadPress::Activate) => &[DPadPress::Right],
+        (DPadPress::Down, DPadPress::Up) => unreachable!(),
+        (DPadPress::Down, DPadPress::Down) => &[],
+        (DPadPress::Down, DPadPress::Left) => &[DPadPress::Left],
+        (DPadPress::Down, DPadPress::Right) => &[DPadPress::Right],
+        (DPadPress::Down, DPadPress::Activate) => &[DPadPress::Up, DPadPress::Right],
+        (DPadPress::Left, DPadPress::Up) => &[DPadPress::Right, DPadPress::Up],
+        (DPadPress::Left, DPadPress::Down) => &[DPadPress::Right],
+        (DPadPress::Left, DPadPress::Left) => &[],
+        (DPadPress::Left, DPadPress::Right) => unreachable!(),
+        (DPadPress::Left, DPadPress::Activate) => {
+            &[DPadPress::Right, DPadPress::Right, DPadPress::Up]
+        }
+        (DPadPress::Right, DPadPress::Up) => &[DPadPress::Left, DPadPress::Up],
+        (DPadPress::Right, DPadPress::Down) => &[DPadPress::Left],
+        (DPadPress::Right, DPadPress::Left) => unreachable!(),
+        (DPadPress::Right, DPadPress::Right) => &[],
+        (DPadPress::Right, DPadPress::Activate) => &[DPadPress::Up],
+        (DPadPress::Activate, DPadPress::Up) => &[DPadPress::Left],
+        (DPadPress::Activate, DPadPress::Down) => &[DPadPress::Left, DPadPress::Down],
+        (DPadPress::Activate, DPadPress::Left) => {
+            &[DPadPress::Down, DPadPress::Left, DPadPress::Left]
+        }
+        (DPadPress::Activate, DPadPress::Right) => &[DPadPress::Down],
+        (DPadPress::Activate, DPadPress::Activate) => &[],
+    });
+    moves.push(DPadPress::Activate);
+
+    moves
 }
 
 fn dpad_moves(code: &[DPadPress]) -> Vec<DPadPress> {
     let mut moves = Vec::new();
-    let mut pos = dpad_position(DPadPress::Activate);
+    let mut prev_key = DPadPress::Activate;
     for target_key in code {
-        let target_pos = dpad_position(*target_key);
-        // eprintln!("{:?} -> {:?} {:?}", pos, target_pos, target_key);
-
-        if target_pos.1 > pos.1 && target_key == &DPadPress::Left {
-            moves.push(DPadPress::Down);
-        }
-
-        if target_pos.0 > pos.0 {
-            for _ in 0..target_pos.0 - pos.0 {
-                moves.push(DPadPress::Right);
-            }
-        } else {
-            for _ in 0..pos.0 - target_pos.0 {
-                moves.push(DPadPress::Left);
-            }
-        }
-
-        if target_pos.1 > pos.1 && target_key != &DPadPress::Left {
-            moves.push(DPadPress::Down);
-        }
-
-        if target_pos.1 < pos.1 {
-            moves.push(DPadPress::Up);
-        }
-
-        moves.push(DPadPress::Activate);
-        pos = target_pos;
+        moves.append(&mut dpad_one_move(prev_key, *target_key));
+        prev_key = *target_key;
     }
     moves
 }
@@ -227,20 +229,61 @@ fn input_code(code: [u8; 4]) -> Vec<DPadPress> {
     stage3
 }
 
+fn dpad_one_move_recursive(
+    from: DPadPress,
+    to: DPadPress,
+    depth: usize,
+    memo: &mut FxHashMap<(DPadPress, DPadPress, usize), usize>,
+) -> usize {
+    let path = dpad_one_move(from, to);
+    if depth == 0 {
+        path.len()
+    } else {
+        let key = (from, to, depth);
+        if let Some(res) = memo.get(&key) {
+            *res
+        } else {
+            let mut len = 0;
+            let mut last_pos = DPadPress::Activate;
+            for next in path {
+                len += dpad_one_move_recursive(last_pos, next, depth - 1, memo);
+                last_pos = next;
+            }
+            memo.insert(key, len);
+            len
+        }
+    }
+}
+
+fn input_code_recursive(
+    code: [u8; 4],
+    dpad_count: usize,
+    dpad_memo: &mut FxHashMap<(DPadPress, DPadPress, usize), usize>,
+) -> usize {
+    let numpad = numpad_moves(&code);
+    let mut len = 0;
+    let mut last_pos = DPadPress::Activate;
+    for next in numpad {
+        len += dpad_one_move_recursive(last_pos, next, dpad_count - 1, dpad_memo);
+        last_pos = next;
+    }
+    len
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_stage1() {
-        let moves = numpad_moves(&[b'0', b'2', b'9', b'A']);
+        let moves = numpad_moves(b"029A");
         dbg!(&moves);
         assert_eq!(moves.len(), "<A^A^^>AvvvA".len())
     }
 
     #[test]
     fn test_stage2() {
-        let numpad_moves = numpad_moves(&[b'0', b'2', b'9', b'A']);
+        let numpad_moves = numpad_moves(b"029A");
         dbg!(&numpad_moves);
         let dpad1_moves = dpad_moves(&numpad_moves);
         dbg!(&dpad1_moves);
