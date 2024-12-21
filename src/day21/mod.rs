@@ -63,6 +63,13 @@ enum DPadPress {
     Activate,
 }
 
+impl DPadPress {
+    const fn values() -> &'static [DPadPress] {
+        use DPadPress::*;
+        &[Up, Down, Left, Right, Activate]
+    }
+}
+
 impl std::fmt::Display for DPadPress {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -158,54 +165,33 @@ fn numpad_moves(code: &[u8; 4]) -> Vec<DPadPress> {
 
 #[inline]
 const fn dpad_one_move(from: DPadPress, to: DPadPress) -> &'static [DPadPress] {
+    use DPadPress::*;
     match (from, to) {
-        (DPadPress::Up, DPadPress::Up) => &[DPadPress::Activate],
-        (DPadPress::Up, DPadPress::Down) => &[DPadPress::Down, DPadPress::Activate],
-        (DPadPress::Up, DPadPress::Left) => {
-            &[DPadPress::Down, DPadPress::Left, DPadPress::Activate]
-        }
-        (DPadPress::Up, DPadPress::Right) => {
-            &[DPadPress::Down, DPadPress::Right, DPadPress::Activate]
-        }
-        (DPadPress::Up, DPadPress::Activate) => &[DPadPress::Right, DPadPress::Activate],
-        (DPadPress::Down, DPadPress::Up) => &[DPadPress::Up, DPadPress::Activate],
-        (DPadPress::Down, DPadPress::Down) => &[DPadPress::Activate],
-        (DPadPress::Down, DPadPress::Left) => &[DPadPress::Left, DPadPress::Activate],
-        (DPadPress::Down, DPadPress::Right) => &[DPadPress::Right, DPadPress::Activate],
-        (DPadPress::Down, DPadPress::Activate) => {
-            &[DPadPress::Up, DPadPress::Right, DPadPress::Activate]
-        }
-        (DPadPress::Left, DPadPress::Up) => &[DPadPress::Right, DPadPress::Up, DPadPress::Activate],
-        (DPadPress::Left, DPadPress::Down) => &[DPadPress::Right, DPadPress::Activate],
-        (DPadPress::Left, DPadPress::Left) => &[DPadPress::Activate],
-        (DPadPress::Left, DPadPress::Right) => {
-            &[DPadPress::Right, DPadPress::Right, DPadPress::Activate]
-        }
-        (DPadPress::Left, DPadPress::Activate) => &[
-            DPadPress::Right,
-            DPadPress::Right,
-            DPadPress::Up,
-            DPadPress::Activate,
-        ],
-        (DPadPress::Right, DPadPress::Up) => &[DPadPress::Left, DPadPress::Up, DPadPress::Activate],
-        (DPadPress::Right, DPadPress::Down) => &[DPadPress::Left, DPadPress::Activate],
-        (DPadPress::Right, DPadPress::Left) => {
-            &[DPadPress::Left, DPadPress::Left, DPadPress::Activate]
-        }
-        (DPadPress::Right, DPadPress::Right) => &[DPadPress::Activate],
-        (DPadPress::Right, DPadPress::Activate) => &[DPadPress::Up, DPadPress::Activate],
-        (DPadPress::Activate, DPadPress::Up) => &[DPadPress::Left, DPadPress::Activate],
-        (DPadPress::Activate, DPadPress::Down) => {
-            &[DPadPress::Left, DPadPress::Down, DPadPress::Activate]
-        }
-        (DPadPress::Activate, DPadPress::Left) => &[
-            DPadPress::Down,
-            DPadPress::Left,
-            DPadPress::Left,
-            DPadPress::Activate,
-        ],
-        (DPadPress::Activate, DPadPress::Right) => &[DPadPress::Down, DPadPress::Activate],
-        (DPadPress::Activate, DPadPress::Activate) => &[DPadPress::Activate],
+        (Up, Up) => &[Activate],
+        (Up, Down) => &[Down, Activate],
+        (Up, Left) => &[Down, Left, Activate],
+        (Up, Right) => &[Down, Right, Activate],
+        (Up, Activate) => &[Right, Activate],
+        (Down, Up) => &[Up, Activate],
+        (Down, Down) => &[Activate],
+        (Down, Left) => &[Left, Activate],
+        (Down, Right) => &[Right, Activate],
+        (Down, Activate) => &[Up, Right, Activate],
+        (Left, Up) => &[Right, Up, Activate],
+        (Left, Down) => &[Right, Activate],
+        (Left, Left) => &[Activate],
+        (Left, Right) => &[Right, Right, Activate],
+        (Left, Activate) => &[Right, Right, Up, Activate],
+        (Right, Up) => &[Left, Up, Activate],
+        (Right, Down) => &[Left, Activate],
+        (Right, Left) => &[Left, Left, Activate],
+        (Right, Right) => &[Activate],
+        (Right, Activate) => &[Up, Activate],
+        (Activate, Up) => &[Left, Activate],
+        (Activate, Down) => &[Left, Down, Activate],
+        (Activate, Left) => &[Down, Left, Left, Activate],
+        (Activate, Right) => &[Down, Activate],
+        (Activate, Activate) => &[Activate],
     }
 }
 
@@ -276,6 +262,62 @@ fn input_code_recursive(
     let mut last_pos = DPadPress::Activate;
     for next in numpad {
         len += dpad_one_move_recursive(last_pos, next, dpad_count - 1, dpad_memo);
+        last_pos = next;
+    }
+    len
+}
+
+#[aoc(day21, part2, lut)]
+pub fn part2_lut(input: &Input) -> usize {
+    let mut res = 0;
+    let lut = build_dpad_lut(25);
+    for code in input {
+        let move_count = input_code_lut(*code, &lut);
+        let value = (code[0] - b'0') as usize * 100
+            + (code[1] - b'0') as usize * 10
+            + (code[2] - b'0') as usize;
+        res += value * move_count;
+    }
+    res
+}
+
+fn build_dpad_lut(depth: usize) -> FxHashMap<(DPadPress, DPadPress), usize> {
+    let mut lut = FxHashMap::default();
+    if depth == 0 {
+        for &from in DPadPress::values() {
+            for &to in DPadPress::values() {
+                let path = dpad_one_move(from, to);
+                lut.insert((from, to), path.len());
+            }
+        }
+    } else {
+        let prev_lut = build_dpad_lut(depth - 1);
+        for &from in DPadPress::values() {
+            for &to in DPadPress::values() {
+                let path = dpad_one_move(from, to);
+                if depth == 0 {
+                    lut.insert((from, to), path.len());
+                } else {
+                    let mut len = 0;
+                    let mut last_pos = DPadPress::Activate;
+                    for next in path {
+                        len += prev_lut[&(last_pos, *next)];
+                        last_pos = *next;
+                    }
+                    lut.insert((from, to), len);
+                }
+            }
+        }
+    }
+    lut
+}
+
+fn input_code_lut(code: [u8; 4], dpad_lut: &FxHashMap<(DPadPress, DPadPress), usize>) -> usize {
+    let numpad = numpad_moves(&code);
+    let mut len = 0;
+    let mut last_pos = DPadPress::Activate;
+    for next in numpad {
+        len += dpad_lut[&(last_pos, next)];
         last_pos = next;
     }
     len
