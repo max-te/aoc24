@@ -5,11 +5,11 @@ use rustc_hash::FxHashMap;
 type Input = [[u8; 4]; 5];
 
 pub fn part1(puzzle: &str) -> usize {
-    one_num_lut(puzzle)
+    one_code_lut(puzzle)
 }
 
 pub fn part2(puzzle: &str) -> usize {
-    two_num_lut(puzzle)
+    two_code_lut(puzzle)
 }
 
 #[aoc_generator(day21, part1, naive)]
@@ -511,13 +511,13 @@ const fn build_numpad_lut(dpad_depth: usize) -> [usize; 11 * 11] {
 }
 
 #[inline]
-fn input_code_numpad_lut(code: [u8; 4], numpad_lut: &[usize; 11 * 11]) -> usize {
+const fn input_code_numpad_lut(code: [u8; 4], numpad_lut: &[usize; 11 * 11]) -> usize {
     let mut prev_key = b'A';
     let mut res = 0;
-    for c in code {
+    const_for!(c_idx, c in code => {
         res += numpad_lut[numpad_lut_idx(prev_key, c)];
         prev_key = c;
-    }
+    });
     res
 }
 
@@ -559,6 +559,63 @@ pub fn one_num_lut(input: &str) -> usize {
         let value = code[0] as usize * 100 + code[1] as usize * 10 + code[2] as usize
             - const { b'0' as usize * 111 };
         res += value * move_count;
+    }
+    res
+}
+
+const fn build_code_lut(dpad_depth: usize) -> [usize; 1000] {
+    let mut code_lut = [0; 1000];
+    let numpad_lut = build_numpad_lut(dpad_depth);
+    const_for!(code_num in (0)..(1000) => {
+        let code = [
+            (code_num / 100) as u8 + b'0',
+            ((code_num / 10) % 10) as u8 + b'0',
+            (code_num % 10) as u8 + b'0',
+            b'A',
+        ];
+        let move_count = input_code_numpad_lut(code, &numpad_lut);
+        code_lut[code_num] = move_count * code_num;
+
+    });
+    code_lut
+}
+
+#[inline]
+#[aoc(day21, part1, code_lut)]
+fn one_code_lut(input: &str) -> usize {
+    let input = input.as_bytes();
+    let mut res = 0;
+    let lut = const { build_code_lut(2) };
+    for i in 0..5 {
+        let code = [
+            input[i * 5],
+            input[i * 5 + 1],
+            input[i * 5 + 2],
+            input[i * 5 + 3],
+        ];
+        let code_num = code[0] as usize * 100 + code[1] as usize * 10 + code[2] as usize
+            - const { b'0' as usize * 111 };
+        res += lut[code_num];
+    }
+    res
+}
+
+#[inline]
+#[aoc(day21, part2, code_lut)]
+fn two_code_lut(input: &str) -> usize {
+    let input = input.as_bytes();
+    let mut res = 0;
+    let lut = const { build_code_lut(25) };
+    for i in 0..5 {
+        let code = [
+            input[i * 5],
+            input[i * 5 + 1],
+            input[i * 5 + 2],
+            input[i * 5 + 3],
+        ];
+        let code_num = code[0] as usize * 100 + code[1] as usize * 10 + code[2] as usize
+            - const { b'0' as usize * 111 };
+        res += lut[code_num];
     }
     res
 }
