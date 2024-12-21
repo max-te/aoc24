@@ -565,12 +565,12 @@ pub fn one_num_lut(input: &str) -> usize {
 
 #[inline]
 const fn code_lut_idx(code: [u8; 3]) -> usize {
-    (code[0]) as usize * 100 + (code[1]) as usize * 10 + (code[2]) as usize
-        - const { b'0' as usize * 111 }
+    // ASCII digits are 011_0000 to 011_1001
+    (((code[0] as usize) << 8) ^ ((code[1] as usize) << 4) ^ (code[2] as usize)) & 0b1111_1111_1111
 }
 
-const fn build_code_lut(dpad_depth: usize) -> [usize; 1000] {
-    let mut code_lut = [0; 1000];
+const fn build_code_lut(dpad_depth: usize) -> [usize; 4096] {
+    let mut code_lut = [0; 4096];
     let numpad_lut = build_numpad_lut(dpad_depth);
     const_for!(code_num in (0)..(1000) => {
         let code = [
@@ -606,15 +606,8 @@ fn two_code_lut(input: &str) -> usize {
     let mut res = 0;
     let lut = const { build_code_lut(25) };
     for i in 0..5 {
-        let code = [
-            input[i * 5],
-            input[i * 5 + 1],
-            input[i * 5 + 2],
-            input[i * 5 + 3],
-        ];
-        let code_num = code[0] as usize * 100 + code[1] as usize * 10 + code[2] as usize
-            - const { b'0' as usize * 111 };
-        res += lut[code_num];
+        let code = [input[i * 5], input[i * 5 + 1], input[i * 5 + 2]];
+        res += lut[code_lut_idx(code)];
     }
     res
 }
