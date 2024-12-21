@@ -278,7 +278,7 @@ fn input_code_recursive(
 #[aoc(day21, part2, lut)]
 pub fn two_lut(input: &Input) -> usize {
     let mut res = 0;
-    let lut = build_dpad_lut(25);
+    let lut = const { build_dpad_lut(25) };
     for code in input {
         let move_count = input_code_lut(*code, &lut);
         let value = (code[0] - b'0') as usize * 100
@@ -293,29 +293,40 @@ const fn dpad_lut_key(from: DPadPress, to: DPadPress) -> usize {
     from as usize * 5 + to as usize
 }
 
-fn build_dpad_lut(depth: usize) -> [usize; 25] {
+macro_rules! const_for {
+    ($index:ident, $x:ident in $iter:expr => $body:expr) => {{
+        let mut $index = 0;
+        while $index < $iter.len() {
+            let $x = $iter[$index];
+            $body;
+            $index += 1;
+        }
+    }};
+}
+
+const fn build_dpad_lut(depth: usize) -> [usize; 25] {
     let mut lut = [0; 25];
     if depth == 1 {
-        for &from in DPadPress::values() {
-            for &to in DPadPress::values() {
+        const_for!(from_idx, from in DPadPress::values() => {
+            const_for!(to_idx, to in DPadPress::values() => {
                 let key = dpad_lut_key(from, to);
                 let path = dpad_one_move(from, to);
                 lut[key] = path.len();
-            }
-        }
+            })
+        })
     } else {
         let prev_lut = build_dpad_lut(depth - 1);
-        for &from in DPadPress::values() {
-            for &to in DPadPress::values() {
-                let key = dpad_lut_key(from, to);
-                let path = dpad_one_move(from, to);
-                let mut last_pos = DPadPress::Activate;
-                for next in path {
-                    lut[key] += prev_lut[dpad_lut_key(last_pos, *next)];
-                    last_pos = *next;
-                }
-            }
-        }
+        const_for!(from_idx, from in DPadPress::values() => {
+        const_for!(to_idx, to in DPadPress::values() => {
+            let key = dpad_lut_key(from, to);
+            let path = dpad_one_move(from, to);
+            let mut last_pos = DPadPress::Activate;
+            const_for!(path_ix, next in path => {
+                lut[key] += prev_lut[dpad_lut_key(last_pos, next)];
+                last_pos = next;
+            })
+            })
+        })
     }
     lut
 }
