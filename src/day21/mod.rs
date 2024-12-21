@@ -1,4 +1,5 @@
 use aoc_runner_derive::{aoc, aoc_generator};
+use arrayvec::ArrayVec;
 use rustc_hash::FxHashMap;
 
 type Input = [[u8; 4]; 5];
@@ -111,8 +112,8 @@ fn numpad_position(key: u8) -> (usize, usize) {
     }
 }
 
-fn numpad_moves(code: &[u8; 4]) -> Vec<DPadPress> {
-    let mut moves = Vec::new();
+fn numpad_moves(code: &[u8; 4]) -> ArrayVec<DPadPress, 20> {
+    let mut moves = ArrayVec::new();
     let mut pos = numpad_position(b'A');
     for target_key in code {
         let target_pos = numpad_position(*target_key);
@@ -144,17 +145,23 @@ fn numpad_moves(code: &[u8; 4]) -> Vec<DPadPress> {
                 for _ in 0..target_pos.0 - pos.0 {
                     moves.push(DPadPress::Right);
                 }
-                moves.extend_from_slice(v_moves);
+                for v_move in v_moves {
+                    moves.push(*v_move);
+                }
             } else {
                 // First vertical, then right
-                moves.extend_from_slice(v_moves);
+                for v_move in v_moves {
+                    moves.push(*v_move);
+                }
                 for _ in 0..target_pos.0 - pos.0 {
                     moves.push(DPadPress::Right);
                 }
             }
         } else if pos.1 == 3 && target_pos.0 == 0 {
             // First up, so we don't crash
-            moves.extend_from_slice(v_moves);
+            for v_move in v_moves {
+                moves.push(*v_move);
+            }
             for _ in 0..pos.0 - target_pos.0 {
                 moves.push(DPadPress::Left);
             }
@@ -163,7 +170,9 @@ fn numpad_moves(code: &[u8; 4]) -> Vec<DPadPress> {
             for _ in 0..pos.0 - target_pos.0 {
                 moves.push(DPadPress::Left);
             }
-            moves.extend_from_slice(v_moves);
+            for v_move in v_moves {
+                moves.push(*v_move);
+            }
         }
         moves.push(DPadPress::Activate);
         pos = target_pos;
