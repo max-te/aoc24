@@ -5,14 +5,18 @@ use rustc_hash::FxHashMap;
 type Input = [[u8; 4]; 5];
 
 pub fn part1(puzzle: &str) -> usize {
-    one_lut(&parse(puzzle))
+    one_num_lut(puzzle)
 }
 
 pub fn part2(puzzle: &str) -> usize {
-    two_lut(&parse(puzzle))
+    two_num_lut(puzzle)
 }
 
-#[aoc_generator(day21)]
+#[aoc_generator(day21, part1, naive)]
+#[aoc_generator(day21, part1, recursive)]
+#[aoc_generator(day21, part2, recursive)]
+#[aoc_generator(day21, part1, lut)]
+#[aoc_generator(day21, part2, lut)]
 pub fn parse(input: &str) -> Input {
     let input = input.as_bytes();
     let mut result = [[0; 4]; 5];
@@ -91,7 +95,8 @@ impl std::fmt::Display for DPadPress {
     }
 }
 
-fn numpad_position(key: u8) -> (usize, usize) {
+#[inline]
+const fn numpad_position(key: u8) -> (usize, usize) {
     match key {
         b'7' => (0, 0),
         b'8' => (1, 0),
@@ -324,6 +329,13 @@ const fn dpad_lut_key(from: DPadPress, to: DPadPress) -> usize {
 }
 
 macro_rules! const_for {
+    ($index:ident in ($from:expr)..($to:expr) => $body:expr) => {{
+        let mut $index = $from;
+        while $index < $to {
+            $body;
+            $index += 1;
+        }
+    }};
     ($index:ident, $x:ident in $iter:expr => $body:expr) => {{
         let mut $index = 0;
         while $index < $iter.len() {
@@ -372,6 +384,185 @@ fn input_code_lut(code: [u8; 4], dpad_lut: &[usize; 25]) -> usize {
     len
 }
 
+const fn numpad_one_move_array(from: u8, to: u8) -> ([Option<DPadPress>; 6], usize) {
+    let mut moves = [None; 6];
+    let mut len = 0;
+
+    let pos = numpad_position(from);
+    let target_pos = numpad_position(to);
+
+    let v_moves: &[DPadPress] = if target_pos.1 <= pos.1 {
+        match pos.1 - target_pos.1 {
+            0 => &[],
+            1 => &[DPadPress::Up],
+            2 => &[DPadPress::Up, DPadPress::Up],
+            3 => &[DPadPress::Up, DPadPress::Up, DPadPress::Up],
+            _ => unreachable!(),
+        }
+    } else {
+        match target_pos.1 - pos.1 {
+            1 => &[DPadPress::Down],
+            2 => &[DPadPress::Down, DPadPress::Down],
+            3 => &[DPadPress::Down, DPadPress::Down, DPadPress::Down],
+            _ => unreachable!(),
+        }
+    };
+
+    if target_pos.0 > pos.0 {
+        if pos.0 == 0 && target_pos.1 == 3 {
+            // First right, so we don't crash
+            const_for!(_x in (0)..(target_pos.0 - pos.0) => {
+                moves[len] = Some(DPadPress::Right);
+                len += 1;
+            });
+            const_for!(mov_idx, v_move in v_moves => {
+                moves[len] = Some(v_move);
+                len += 1;
+            });
+        } else {
+            // First vertical, then right
+            const_for!(mov_idx, v_move in v_moves => {
+                moves[len] = Some(v_move);
+                len += 1;
+            });
+            const_for!(_x in (0)..(target_pos.0 - pos.0) => {
+                moves[len] = Some(DPadPress::Right);
+                len += 1;
+            });
+        }
+    } else if pos.1 == 3 && target_pos.0 == 0 {
+        // First up, so we don't crash
+        const_for!(mov_idx, v_move in v_moves => {
+            moves[len] = Some(v_move);
+            len += 1;
+        });
+
+        const_for!(_x in (0)..(pos.0 - target_pos.0) => {
+            moves[len] = Some(DPadPress::Left);
+            len += 1;
+        });
+    } else {
+        // First left, then vertical
+        const_for!(_x in (0)..(pos.0 - target_pos.0) => {
+            moves[len] = Some(DPadPress::Left);
+            len += 1;
+        });
+        const_for!(mov_idx, v_move in v_moves => {
+            moves[len] = Some(v_move);
+            len += 1;
+        });
+    }
+    moves[len] = Some(DPadPress::Activate);
+    len += 1;
+    (moves, len)
+}
+
+const NUMPAD_KEYS: [u8; 11] = [
+    b'7', b'8', b'9', b'4', b'5', b'6', b'1', b'2', b'3', b'0', b'A',
+];
+
+#[inline]
+const fn numpad_lut_halfidx(key: u8) -> usize {
+    match key {
+        b'7' => 0,
+        b'8' => 1,
+        b'9' => 2,
+        b'4' => 3,
+        b'5' => 4,
+        b'6' => 5,
+        b'1' => 6,
+        b'2' => 7,
+        b'3' => 8,
+        b'0' => 9,
+        b'A' => 10,
+        _ => unreachable!(),
+    }
+}
+
+#[inline]
+const fn numpad_lut_idx(from: u8, to: u8) -> usize {
+    let from_idx = numpad_lut_halfidx(from);
+    let to_idx = numpad_lut_halfidx(to);
+    from_idx * 11 + to_idx
+}
+
+const fn build_numpad_lut(dpad_depth: usize) -> [usize; 11 * 11] {
+    let dpad_lut = build_dpad_lut(dpad_depth);
+    let mut numpad_lut = [0; 11 * 11];
+
+    const_for!(from_idx, from in NUMPAD_KEYS => {
+        const_for!(to_idx, to in NUMPAD_KEYS => {
+            let key = numpad_lut_idx(from, to);
+            let (path, path_len) = numpad_one_move_array(from, to);
+            let mut last_pos = DPadPress::Activate;
+            const_for!(path_idx in (0)..(path_len) => {
+                match path[path_idx] {
+                    None => unreachable!(),
+                    Some(next) => {
+                        numpad_lut[key] += dpad_lut[dpad_lut_key(last_pos, next)];
+                        last_pos = next;
+                    }
+                }
+            })
+        })
+    });
+
+    numpad_lut
+}
+
+#[inline]
+fn input_code_numpad_lut(code: [u8; 4], numpad_lut: &[usize; 11 * 11]) -> usize {
+    let mut prev_key = b'A';
+    let mut res = 0;
+    for c in code {
+        res += numpad_lut[numpad_lut_idx(prev_key, c)];
+        prev_key = c;
+    }
+    res
+}
+
+#[inline]
+#[aoc(day21, part2, num_lut)]
+pub fn two_num_lut(input: &str) -> usize {
+    let input = input.as_bytes();
+    let mut res = 0;
+    let lut = const { build_numpad_lut(25) };
+    for i in 0..5 {
+        let code = [
+            input[i * 5],
+            input[i * 5 + 1],
+            input[i * 5 + 2],
+            input[i * 5 + 3],
+        ];
+        let move_count = input_code_numpad_lut(code, &lut);
+        let value = code[0] as usize * 100 + code[1] as usize * 10 + code[2] as usize
+            - const { b'0' as usize * 111 };
+        res += value * move_count;
+    }
+    res
+}
+
+#[inline]
+#[aoc(day21, part1, num_lut)]
+pub fn one_num_lut(input: &str) -> usize {
+    let input = input.as_bytes();
+    let mut res = 0;
+    let lut = const { build_numpad_lut(2) };
+    for i in 0..5 {
+        let code = [
+            input[i * 5],
+            input[i * 5 + 1],
+            input[i * 5 + 2],
+            input[i * 5 + 3],
+        ];
+        let move_count = input_code_numpad_lut(code, &lut);
+        let value = code[0] as usize * 100 + code[1] as usize * 10 + code[2] as usize
+            - const { b'0' as usize * 111 };
+        res += value * move_count;
+    }
+    res
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -408,5 +599,20 @@ mod tests {
     fn test_pub_part2() {
         let input = include_str!("test.txt");
         assert_eq!(part2(input), 154115708116294);
+    }
+
+    #[test]
+    fn test_numpad_one_move_array() {
+        for from in NUMPAD_KEYS {
+            for to in NUMPAD_KEYS {
+                let (path, len) = numpad_one_move_array(from, to);
+                let vec_path = numpad_one_move(from, to);
+                assert_eq!(len, vec_path.len());
+                assert_eq!(
+                    &path[..len].iter().map(|x| x.unwrap()).collect::<Vec<_>>(),
+                    vec_path.as_slice()
+                );
+            }
+        }
     }
 }
