@@ -289,30 +289,30 @@ pub fn two_lut(input: &Input) -> usize {
     res
 }
 
-fn build_dpad_lut(depth: usize) -> FxHashMap<(DPadPress, DPadPress), usize> {
-    let mut lut = FxHashMap::default();
+const fn dpad_lut_key(from: DPadPress, to: DPadPress) -> usize {
+    from as usize * 5 + to as usize
+}
+
+fn build_dpad_lut(depth: usize) -> [usize; 25] {
+    let mut lut = [0; 25];
     if depth == 1 {
         for &from in DPadPress::values() {
             for &to in DPadPress::values() {
+                let key = dpad_lut_key(from, to);
                 let path = dpad_one_move(from, to);
-                lut.insert((from, to), path.len());
+                lut[key] = path.len();
             }
         }
     } else {
         let prev_lut = build_dpad_lut(depth - 1);
         for &from in DPadPress::values() {
             for &to in DPadPress::values() {
+                let key = dpad_lut_key(from, to);
                 let path = dpad_one_move(from, to);
-                if depth == 0 {
-                    lut.insert((from, to), path.len());
-                } else {
-                    let mut len = 0;
-                    let mut last_pos = DPadPress::Activate;
-                    for next in path {
-                        len += prev_lut[&(last_pos, *next)];
-                        last_pos = *next;
-                    }
-                    lut.insert((from, to), len);
+                let mut last_pos = DPadPress::Activate;
+                for next in path {
+                    lut[key] += prev_lut[dpad_lut_key(last_pos, *next)];
+                    last_pos = *next;
                 }
             }
         }
@@ -320,12 +320,12 @@ fn build_dpad_lut(depth: usize) -> FxHashMap<(DPadPress, DPadPress), usize> {
     lut
 }
 
-fn input_code_lut(code: [u8; 4], dpad_lut: &FxHashMap<(DPadPress, DPadPress), usize>) -> usize {
+fn input_code_lut(code: [u8; 4], dpad_lut: &[usize; 25]) -> usize {
     let numpad = numpad_moves(&code);
     let mut len = 0;
     let mut last_pos = DPadPress::Activate;
     for next in numpad {
-        len += dpad_lut[&(last_pos, next)];
+        len += dpad_lut[dpad_lut_key(last_pos, next)];
         last_pos = next;
     }
     len
