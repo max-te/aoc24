@@ -1,7 +1,7 @@
 use aoc_runner_derive::aoc;
 use itertools::Itertools;
 use rayon::{
-    iter::{IntoParallelIterator, ParallelBridge, ParallelIterator},
+    iter::{ParallelBridge, ParallelIterator},
     slice::ParallelSlice,
 };
 use rustc_hash::FxHashMap;
@@ -78,21 +78,24 @@ fn two(puzzle: &str) -> u32 {
 
 const SEQUENCE_VALUE_TABLE_SIZE: usize = 19 * 19 * 19 * 19;
 
+#[inline(always)]
 fn sequence_to_index((d1, d2, d3, d4): (i8, i8, i8, i8)) -> usize {
-    (d1 + 9) as usize * const { 19 * 19 * 19 }
-        + (d2 + 9) as usize * const { 19 * 19 }
-        + (d3 + 9) as usize * 19
-        + (d4 + 9) as usize
+    ((d1 + 9) as usize * 19 + (d2 + 9) as usize) * (19 * 19)
+        + ((d3 + 9) as usize * 19 + (d4 + 9) as usize)
 }
 
 #[inline]
-fn add_sequence_values_array(secret: u32, monkey_idx: u16, sequence_value: &mut [(u16, u16)]) {
+unsafe fn add_sequence_values_array(
+    secret: u32,
+    monkey_idx: u16,
+    sequence_value: &mut [(u16, u16)],
+) {
     let mut prices = prices(secret).take(2001);
 
-    let p0 = prices.next().unwrap();
-    let p1 = prices.next().unwrap();
-    let p2 = prices.next().unwrap();
-    let p3 = prices.next().unwrap();
+    let p0 = prices.next().unwrap_unchecked();
+    let p1 = prices.next().unwrap_unchecked();
+    let p2 = prices.next().unwrap_unchecked();
+    let p3 = prices.next().unwrap_unchecked();
     let mut d1 = p1 - p0;
     let mut d2 = p2 - p1;
     let mut d3 = p3 - p2;
@@ -101,7 +104,7 @@ fn add_sequence_values_array(secret: u32, monkey_idx: u16, sequence_value: &mut 
     while let Some(p) = prices.next() {
         let d4 = p - previous_price;
         let changes = (d1, d2, d3, d4);
-        let entry = &mut sequence_value[sequence_to_index(changes)];
+        let entry = sequence_value.get_unchecked_mut(sequence_to_index(changes));
         if entry.0 != monkey_idx {
             *entry = (monkey_idx, entry.1 + p as u16);
         }
@@ -117,7 +120,7 @@ fn two_array(puzzle: &str) -> u16 {
     let mut sequence_value = [(0, 0); SEQUENCE_VALUE_TABLE_SIZE];
     let mut monkey_idx = 1;
     for secret in puzzle.lines().map(|l| l.parse::<u32>().unwrap()) {
-        add_sequence_values_array(secret, monkey_idx, &mut sequence_value);
+        unsafe { add_sequence_values_array(secret, monkey_idx, &mut sequence_value) };
         monkey_idx += 1;
     }
     sequence_value.iter().map(|v| v.1).max().unwrap()
@@ -137,7 +140,9 @@ fn two_array_rayon(puzzle: &str) -> u16 {
             let mut sequence_value = vec![(0, 0); SEQUENCE_VALUE_TABLE_SIZE];
             let mut monkey_idx = 1;
             for secret in chunk {
-                add_sequence_values_array(*secret, monkey_idx, sequence_value.as_mut_slice());
+                unsafe {
+                    add_sequence_values_array(*secret, monkey_idx, sequence_value.as_mut_slice())
+                };
                 monkey_idx += 1;
             }
             sequence_value
