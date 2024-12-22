@@ -158,6 +158,39 @@ fn two_array_rayon(puzzle: &str) -> u16 {
     sequence_value.iter().map(|v| v.1).max().unwrap()
 }
 
+#[aoc(day22, part2, hashmap_rayon)]
+fn two_hashmap_rayon(puzzle: &str) -> u32 {
+    let secrets = puzzle
+        .lines()
+        .par_bridge()
+        .map(|l| l.parse::<u32>().unwrap())
+        .collect::<Vec<_>>();
+
+    let sequence_value = secrets
+        .par_chunks(128)
+        .fold(
+            || FxHashMap::default(),
+            |mut sequence_value, chunk| {
+                let mut monkey_idx = 1;
+                for secret in chunk {
+                    add_sequence_values(*secret, monkey_idx, &mut sequence_value);
+                    monkey_idx += 1;
+                }
+                sequence_value
+            },
+        )
+        .reduce_with(|mut a, b| {
+            for (k, v) in b {
+                let entry = a.entry(k).or_insert((0, 0));
+                entry.1 += v.1;
+            }
+            a
+        })
+        .unwrap();
+
+    sequence_value.iter().map(|v| v.1 .1).max().unwrap()
+}
+
 pub fn part2(puzzle: &str) -> u16 {
     two_array(puzzle)
 }
