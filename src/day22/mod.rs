@@ -59,7 +59,7 @@ fn add_sequence_values(secret: u32, monkey_idx: usize, sequence_value: &mut Sequ
     }
 }
 
-#[aoc(day22, part2)]
+#[aoc(day22, part2, hashmap)]
 fn two(puzzle: &str) -> u32 {
     let mut sequence_value = FxHashMap::default();
     for (monkey_idx, secret) in puzzle
@@ -84,8 +84,8 @@ fn sequence_to_index((d1, d2, d3, d4): (i8, i8, i8, i8)) -> usize {
 #[inline]
 fn add_sequence_values_array(
     secret: u32,
-    monkey_idx: u32,
-    sequence_value: &mut [(u32, u32); SEQUENCE_VALUE_TABLE_SIZE],
+    monkey_idx: u16,
+    sequence_value: &mut [(u16, u16); SEQUENCE_VALUE_TABLE_SIZE],
 ) {
     let mut prices = prices(secret).take(2001);
 
@@ -103,7 +103,7 @@ fn add_sequence_values_array(
         let changes = (d1, d2, d3, d4);
         let entry = &mut sequence_value[sequence_to_index(changes)];
         if entry.0 != monkey_idx {
-            *entry = (monkey_idx, entry.1 + p as u32);
+            *entry = (monkey_idx, entry.1 + p as u16);
         }
         previous_price = p;
         d1 = d2;
@@ -113,7 +113,7 @@ fn add_sequence_values_array(
 }
 
 #[aoc(day22, part2, array)]
-fn two_array(puzzle: &str) -> u32 {
+fn two_array(puzzle: &str) -> u16 {
     let mut sequence_value = [(0, 0); SEQUENCE_VALUE_TABLE_SIZE];
     let mut monkey_idx = 1;
     for secret in puzzle.lines().map(|l| l.parse::<u32>().unwrap()) {
@@ -123,7 +123,7 @@ fn two_array(puzzle: &str) -> u32 {
     sequence_value.iter().map(|v| v.1).max().unwrap()
 }
 
-pub fn part2(puzzle: &str) -> u32 {
+pub fn part2(puzzle: &str) -> u16 {
     two_array(puzzle)
 }
 
