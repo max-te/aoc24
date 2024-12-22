@@ -26,7 +26,7 @@ impl Iterator for BananaTwister {
 }
 
 #[inline]
-fn prices(secret: u32) -> impl Iterator<Item = i32> {
+fn prices(secret: u32) -> impl Iterator<Item = i8> {
     BananaTwister(secret).map(|secret| (secret % 10) as _)
 }
 
@@ -42,7 +42,7 @@ pub fn part1(puzzle: &str) -> u64 {
     res
 }
 
-type SequenceValue = FxHashMap<(i32, i32, i32, i32), (usize, u32)>;
+type SequenceValue = FxHashMap<(i8, i8, i8, i8), (usize, u32)>;
 
 #[inline]
 fn add_sequence_values(secret: u32, monkey_idx: usize, sequence_value: &mut SequenceValue) {
@@ -74,7 +74,7 @@ fn two(puzzle: &str) -> u32 {
 
 const SEQUENCE_VALUE_TABLE_SIZE: usize = 19 * 19 * 19 * 19;
 
-fn sequence_to_index((d1, d2, d3, d4): (i32, i32, i32, i32)) -> usize {
+fn sequence_to_index((d1, d2, d3, d4): (i8, i8, i8, i8)) -> usize {
     (d1 + 9) as usize * const { 19 * 19 * 19 }
         + (d2 + 9) as usize * const { 19 * 19 }
         + (d3 + 9) as usize * 19
