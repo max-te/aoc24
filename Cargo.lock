@@ -72,6 +72,7 @@ dependencies = [
  "paste",
  "pathfinding",
  "petgraph",
+ "rayon",
  "rustc-hash",
  "smallvec",
  "ureq",

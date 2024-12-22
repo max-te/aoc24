@@ -1,5 +1,9 @@
 use aoc_runner_derive::aoc;
 use itertools::Itertools;
+use rayon::{
+    iter::{IntoParallelIterator, ParallelBridge, ParallelIterator},
+    slice::ParallelSlice,
+};
 use rustc_hash::FxHashMap;
 
 const SECRET_MASK: u32 = 16777216 - 1;
@@ -82,11 +86,7 @@ fn sequence_to_index((d1, d2, d3, d4): (i8, i8, i8, i8)) -> usize {
 }
 
 #[inline]
-fn add_sequence_values_array(
-    secret: u32,
-    monkey_idx: u16,
-    sequence_value: &mut [(u16, u16); SEQUENCE_VALUE_TABLE_SIZE],
-) {
+fn add_sequence_values_array(secret: u32, monkey_idx: u16, sequence_value: &mut [(u16, u16)]) {
     let mut prices = prices(secret).take(2001);
 
     let p0 = prices.next().unwrap();
@@ -120,6 +120,36 @@ fn two_array(puzzle: &str) -> u16 {
         add_sequence_values_array(secret, monkey_idx, &mut sequence_value);
         monkey_idx += 1;
     }
+    sequence_value.iter().map(|v| v.1).max().unwrap()
+}
+
+#[aoc(day22, part2, array_rayon)]
+fn two_array_rayon(puzzle: &str) -> u16 {
+    let secrets = puzzle
+        .lines()
+        .par_bridge()
+        .map(|l| l.parse::<u32>().unwrap())
+        .collect::<Vec<_>>();
+
+    let sequence_value = secrets
+        .par_chunks(128)
+        .map(|chunk| {
+            let mut sequence_value = vec![(0, 0); SEQUENCE_VALUE_TABLE_SIZE];
+            let mut monkey_idx = 1;
+            for secret in chunk {
+                add_sequence_values_array(*secret, monkey_idx, sequence_value.as_mut_slice());
+                monkey_idx += 1;
+            }
+            sequence_value
+        })
+        .reduce_with(|mut a, b| {
+            for i in 0..SEQUENCE_VALUE_TABLE_SIZE {
+                a[i].1 += b[i].1;
+            }
+            a
+        })
+        .unwrap();
+
     sequence_value.iter().map(|v| v.1).max().unwrap()
 }
 
