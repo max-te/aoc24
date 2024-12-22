@@ -72,20 +72,20 @@ fn two(puzzle: &str) -> u32 {
     sequence_value.values().map(|v| v.1).max().unwrap()
 }
 
-const SEQUENCE_VALUE_TABLE_SIZE: usize = 20 * 20 * 20 * 20;
+const SEQUENCE_VALUE_TABLE_SIZE: usize = 19 * 19 * 19 * 19;
 
 fn sequence_to_index((d1, d2, d3, d4): (i32, i32, i32, i32)) -> usize {
-    (d1 + 10) as usize * 20 * 20 * 20
-        + (d2 + 10) as usize * 20 * 20
-        + (d3 + 10) as usize * 20
-        + (d4 + 10) as usize
+    (d1 + 9) as usize * const { 19 * 19 * 19 }
+        + (d2 + 9) as usize * const { 19 * 19 }
+        + (d3 + 9) as usize * 19
+        + (d4 + 9) as usize
 }
 
 #[inline]
 fn add_sequence_values_array(
     secret: u32,
-    monkey_idx: usize,
-    sequence_value: &mut [(usize, u32); SEQUENCE_VALUE_TABLE_SIZE],
+    monkey_idx: u32,
+    sequence_value: &mut [(u32, u32); SEQUENCE_VALUE_TABLE_SIZE],
 ) {
     let mut prices = prices(secret).take(2001);
 
@@ -115,12 +115,10 @@ fn add_sequence_values_array(
 #[aoc(day22, part2, array)]
 fn two_array(puzzle: &str) -> u32 {
     let mut sequence_value = [(0, 0); SEQUENCE_VALUE_TABLE_SIZE];
-    for (monkey_idx, secret) in puzzle
-        .lines()
-        .map(|l| l.parse::<u32>().unwrap())
-        .enumerate()
-    {
-        add_sequence_values_array(secret, monkey_idx + 1, &mut sequence_value);
+    let mut monkey_idx = 1;
+    for secret in puzzle.lines().map(|l| l.parse::<u32>().unwrap()) {
+        add_sequence_values_array(secret, monkey_idx, &mut sequence_value);
+        monkey_idx += 1;
     }
     sequence_value.iter().map(|v| v.1).max().unwrap()
 }
