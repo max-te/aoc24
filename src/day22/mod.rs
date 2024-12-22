@@ -87,14 +87,28 @@ fn add_sequence_values_array(
     monkey_idx: usize,
     sequence_value: &mut [(usize, u32); SEQUENCE_VALUE_TABLE_SIZE],
 ) {
-    let prices = prices(secret).take(2001);
-    let differences = prices.tuple_windows().map(|(p1, p2)| (p2 - p1, p2));
-    for ((d1, _), (d2, _), (d3, _), (d4, p4)) in differences.tuple_windows() {
+    let mut prices = prices(secret).take(2001);
+
+    let p0 = prices.next().unwrap();
+    let p1 = prices.next().unwrap();
+    let p2 = prices.next().unwrap();
+    let p3 = prices.next().unwrap();
+    let mut d1 = p1 - p0;
+    let mut d2 = p2 - p1;
+    let mut d3 = p3 - p2;
+
+    let mut previous_price = p3;
+    while let Some(p) = prices.next() {
+        let d4 = p - previous_price;
         let changes = (d1, d2, d3, d4);
         let entry = &mut sequence_value[sequence_to_index(changes)];
         if entry.0 != monkey_idx {
-            *entry = (monkey_idx, entry.1 + p4 as u32);
+            *entry = (monkey_idx, entry.1 + p as u32);
         }
+        previous_price = p;
+        d1 = d2;
+        d2 = d3;
+        d3 = d4;
     }
 }
 
