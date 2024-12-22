@@ -42,33 +42,34 @@ pub fn part1(puzzle: &str) -> u64 {
     res
 }
 
-#[inline]
-fn get_sequence_values(secret: u32) -> FxHashMap<(i32, i32, i32, i32), u32> {
-    let mut res = FxHashMap::default();
-    let prices = prices(secret).take(2001);
-    for (p0, p1, p2, p3, p4) in prices.tuple_windows() {
-        let changes = (p1 - p0, p2 - p1, p3 - p2, p4 - p3);
-        res.entry(changes).or_insert(p4 as u32);
-    }
-    res
-}
+type SequenceValue = FxHashMap<(i32, i32, i32, i32), (usize, u32)>;
 
 #[inline]
-fn add_hashmap<T: std::hash::Hash + Eq>(to: &mut FxHashMap<T, u32>, from: FxHashMap<T, u32>) {
-    for (key, value) in from {
-        *to.entry(key).or_insert(0) += value;
+fn add_sequence_values(secret: u32, monkey_idx: usize, sequence_value: &mut SequenceValue) {
+    let prices = prices(secret).take(2001);
+    let differences = prices.tuple_windows().map(|(p1, p2)| (p2 - p1, p2));
+    for ((d1, _), (d2, _), (d3, _), (d4, p4)) in differences.tuple_windows() {
+        let changes = (d1, d2, d3, d4);
+        let entry = sequence_value
+            .entry(changes)
+            .or_insert((monkey_idx, p4 as u32));
+        if entry.0 != monkey_idx {
+            *entry = (monkey_idx, entry.1 + p4 as u32);
+        }
     }
 }
 
 #[aoc(day22, part2)]
 pub fn part2(puzzle: &str) -> u32 {
     let mut sequence_value = FxHashMap::default();
-    for secret in puzzle.lines().map(|l| l.parse::<u32>().unwrap()) {
-        let buyer_values = get_sequence_values(secret);
-        add_hashmap(&mut sequence_value, buyer_values);
+    for (monkey_idx, secret) in puzzle
+        .lines()
+        .map(|l| l.parse::<u32>().unwrap())
+        .enumerate()
+    {
+        add_sequence_values(secret, monkey_idx, &mut sequence_value);
     }
-
-    *sequence_value.values().max().unwrap()
+    sequence_value.values().map(|v| v.1).max().unwrap()
 }
 
 #[cfg(test)]
@@ -106,13 +107,12 @@ mod examples {
     #[test]
     fn test_add_sequence_values() {
         let mut output = FxHashMap::default();
-        let buyer_1 = get_sequence_values(1);
-        assert_eq!(buyer_1.get(&(-2, 1, -1, 3)), Some(&7));
-        add_hashmap(&mut output, buyer_1);
-        add_hashmap(&mut output, get_sequence_values(2));
-        add_hashmap(&mut output, get_sequence_values(3));
-        add_hashmap(&mut output, get_sequence_values(2024));
-        assert_eq!(output.get(&(-2, 1, -1, 3)), Some(&23));
+        add_sequence_values(1, 1, &mut output);
+        assert_eq!(output.get(&(-2, 1, -1, 3)), Some(&(1, 7)));
+        add_sequence_values(2, 2, &mut output);
+        add_sequence_values(3, 3, &mut output);
+        add_sequence_values(2024, 4, &mut output);
+        assert_eq!(output.get(&(-2, 1, -1, 3)), Some(&(4, 23)));
     }
 
     #[test]
