@@ -6,6 +6,8 @@ use rayon::{
 };
 use rustc_hash::FxHashMap;
 
+use crate::util::parse_initial_digits;
+
 const SECRET_MASK: u32 = 16777216 - 1;
 
 #[inline]
@@ -129,33 +131,45 @@ fn two_array(puzzle: &str) -> u16 {
 #[aoc(day22, part2, array_rayon)]
 fn two_array_rayon(puzzle: &str) -> u16 {
     let secrets = puzzle
-        .lines()
-        .par_bridge()
-        .map(|l| l.parse::<u32>().unwrap())
+        .as_bytes()
+        .par_split(|b| *b == b'\n')
+        .filter_map(|l| {
+            if l.is_empty() {
+                None
+            } else {
+                Some(parse_initial_digits(l).0 as u32)
+            }
+        })
         .collect::<Vec<_>>();
 
     let sequence_value = secrets
-        .par_chunks(128)
-        .map(|chunk| {
-            let mut sequence_value = vec![(0, 0); SEQUENCE_VALUE_TABLE_SIZE];
-            let mut monkey_idx = 1;
-            for secret in chunk {
-                unsafe {
-                    add_sequence_values_array(*secret, monkey_idx, sequence_value.as_mut_slice())
-                };
-                monkey_idx += 1;
-            }
-            sequence_value
-        })
+        .par_chunks(200)
+        .fold(
+            || (0, vec![(0, 0); SEQUENCE_VALUE_TABLE_SIZE]),
+            |(prev_monkey_idx, mut sequence_value), chunk| {
+                let mut monkey_idx = prev_monkey_idx + 1;
+                for secret in chunk {
+                    unsafe {
+                        add_sequence_values_array(
+                            *secret,
+                            monkey_idx,
+                            sequence_value.as_mut_slice(),
+                        )
+                    };
+                    monkey_idx += 1;
+                }
+                (monkey_idx, sequence_value)
+            },
+        )
         .reduce_with(|mut a, b| {
             for i in 0..SEQUENCE_VALUE_TABLE_SIZE {
-                a[i].1 += b[i].1;
+                a.1[i].1 += b.1[i].1;
             }
             a
         })
         .unwrap();
 
-    sequence_value.iter().map(|v| v.1).max().unwrap()
+    sequence_value.1.iter().map(|v| v.1).max().unwrap()
 }
 
 #[aoc(day22, part2, hashmap_rayon)]
@@ -192,7 +206,7 @@ fn two_hashmap_rayon(puzzle: &str) -> u32 {
 }
 
 pub fn part2(puzzle: &str) -> u16 {
-    two_array(puzzle)
+    two_array_rayon(puzzle)
 }
 
 #[cfg(test)]
