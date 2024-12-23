@@ -98,6 +98,7 @@ pub fn part2(puzzle: &str) -> String {
     String::from_utf8_lossy(&largest_clique[1..]).to_string()
 }
 
+#[inline]
 fn find_clique_larger_than<'a, 'i>(
     current_clique: &'a mut SmallVec<[Node<'i>; TYPICAL_DEGREE]>,
     additional_node_pool: &'a [Node<'i>],
@@ -140,17 +141,21 @@ fn find_clique_larger_than<'a, 'i>(
     }
 }
 
+#[inline(always)]
 fn sorted_is_subset(sub: &[Node], sup: &[Node]) -> bool {
     let mut cur_idx = 0;
-    for s in sub {
-        while cur_idx < sup.len() && s > unsafe { sup.get_unchecked(cur_idx) } {
+    let mut r = unsafe { sup.get_unchecked(cur_idx) };
+    for l in sub {
+        while cur_idx < sup.len() && l > r {
             cur_idx += 1;
+            r = unsafe { sup.get_unchecked(cur_idx) };
         }
         if cur_idx == sup.len() {
             return false;
         }
-        if s == unsafe { sup.get_unchecked(cur_idx) } {
+        if l == r {
             cur_idx += 1;
+            r = unsafe { sup.get_unchecked(cur_idx) };
         } else {
             return false;
         }
