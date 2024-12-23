@@ -6,10 +6,11 @@ use rustc_hash::FxHashMap;
 use smallvec::{smallvec, SmallVec};
 
 type Node<'i> = [u8; 2];
+const TYPICAL_DEGREE: usize = 13;
 
 #[aoc(day23, part1)]
 pub fn part1(puzzle: &str) -> u64 {
-    let mut links: HashMap<Node, SmallVec<[Node; 10]>, _> = FxHashMap::default();
+    let mut links: HashMap<Node, SmallVec<[Node; TYPICAL_DEGREE]>, _> = FxHashMap::default();
     for line in puzzle.lines() {
         let line = line.as_bytes();
         let a = [line[0], line[1]];
@@ -48,7 +49,7 @@ pub fn part1(puzzle: &str) -> u64 {
 
 #[aoc(day23, part2)]
 pub fn part2(puzzle: &str) -> String {
-    let mut links: HashMap<Node, SmallVec<[Node; 10]>, _> = FxHashMap::default();
+    let mut links: HashMap<Node, SmallVec<[Node; TYPICAL_DEGREE]>, _> = FxHashMap::default();
     for line in puzzle.lines() {
         let line = line.as_bytes();
         let a = [line[0], line[1]];
@@ -91,24 +92,22 @@ pub fn part2(puzzle: &str) -> String {
 }
 
 fn find_clique_larger_than<'a, 'i>(
-    current_clique: &'a mut SmallVec<[Node<'i>; 10]>,
+    current_clique: &'a mut SmallVec<[Node<'i>; TYPICAL_DEGREE]>,
     additional_node_pool: &'a [Node<'i>],
-    links: &'a FxHashMap<Node, SmallVec<[Node<'i>; 10]>>,
+    links: &'a FxHashMap<Node, SmallVec<[Node<'i>; TYPICAL_DEGREE]>>,
     min_size: usize,
-) -> Option<SmallVec<[Node<'i>; 10]>> {
-    // eprintln!("find_clique_larger_than({current_clique:?}, {additional_node_pool:?}, {min_size})");
+) -> Option<SmallVec<[Node<'i>; TYPICAL_DEGREE]>> {
     if current_clique.len() + additional_node_pool.len() < min_size {
-        // eprintln!("find_clique_larger_than({current_clique:?}, {additional_node_pool:?}, {min_size}) = None (fast)");
         return None;
     }
-    let mut best_clique: Option<SmallVec<[Node<'i>; 10]>> = None;
-    'pool: for (i, node) in additional_node_pool.iter().enumerate() {
+    let mut best_clique: Option<SmallVec<[Node<'i>; TYPICAL_DEGREE]>> = None;
+    for (i, node) in additional_node_pool.iter().enumerate() {
         let neighbors = links.get(node).unwrap();
         if neighbors.len() < min_size {
-            continue 'pool;
+            continue;
         }
         if !sorted_is_subset(&current_clique[1..], neighbors) {
-            continue 'pool;
+            continue;
         }
         current_clique.push(*node);
         let better_clique = find_clique_larger_than(
@@ -130,12 +129,10 @@ fn find_clique_larger_than<'a, 'i>(
         .map(|x| x.len() >= min_size)
         .unwrap_or(false)
     {
-        // eprintln!("find_clique_larger_than({current_clique:?}, {additional_node_pool:?}, {min_size}) = Some({best_clique:?})");
         best_clique
     } else if current_clique.as_ref().len() >= min_size {
         Some(current_clique.clone())
     } else {
-        // eprintln!("find_clique_larger_than({current_clique:?}, {additional_node_pool:?}, {min_size}) = None");
         None
     }
 }
