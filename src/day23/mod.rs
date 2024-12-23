@@ -9,7 +9,7 @@ type Node<'i> = [u8; 2];
 
 #[aoc(day23, part1)]
 pub fn part1(puzzle: &str) -> u64 {
-    let mut links: HashMap<Node, Vec<Node>, _> = FxHashMap::default();
+    let mut links: HashMap<Node, SmallVec<[Node; 10]>, _> = FxHashMap::default();
     for line in puzzle.lines() {
         let line = line.as_bytes();
         let a = [line[0], line[1]];
@@ -48,7 +48,7 @@ pub fn part1(puzzle: &str) -> u64 {
 
 #[aoc(day23, part2)]
 pub fn part2(puzzle: &str) -> String {
-    let mut links: HashMap<Node, Vec<Node>, _> = FxHashMap::default();
+    let mut links: HashMap<Node, SmallVec<[Node; 10]>, _> = FxHashMap::default();
     for line in puzzle.lines() {
         let line = line.as_bytes();
         let a = [line[0], line[1]];
@@ -67,7 +67,7 @@ pub fn part2(puzzle: &str) -> String {
         }
         if let Some(clique) = find_clique_larger_than(
             &smallvec![*node],
-            neighbors,
+            neighbors.as_slice(),
             &links,
             largest_clique.len() + 1,
         ) {
@@ -87,7 +87,7 @@ pub fn part2(puzzle: &str) -> String {
 fn find_clique_larger_than<'a, 'i>(
     current_clique: &'a SmallVec<[Node<'i>; 10]>,
     additional_node_pool: &'a [Node<'i>],
-    links: &'a FxHashMap<Node, Vec<Node<'i>>>,
+    links: &'a FxHashMap<Node, SmallVec<[Node<'i>; 10]>>,
     min_size: usize,
 ) -> Option<SmallVec<[Node<'i>; 10]>> {
     // eprintln!("find_clique_larger_than({current_clique:?}, {additional_node_pool:?}, {min_size})");
