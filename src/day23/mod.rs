@@ -1,23 +1,36 @@
-use std::collections::HashMap;
-
 use aoc_runner_derive::aoc;
 use itertools::Itertools;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxBuildHasher, FxHashMap};
 use smallvec::{smallvec, SmallVec};
 
 type Node<'i> = [u8; 2];
 const TYPICAL_DEGREE: usize = 13;
 
-#[aoc(day23, part1)]
-pub fn part1(puzzle: &str) -> u64 {
-    let mut links: HashMap<Node, SmallVec<[Node; TYPICAL_DEGREE]>, _> = FxHashMap::default();
-    for line in puzzle.lines() {
-        let line = line.as_bytes();
-        let a = [line[0], line[1]];
-        let b = [line[3], line[4]];
+#[inline(always)]
+unsafe fn parse(puzzle: &str) -> FxHashMap<Node, SmallVec<[Node; TYPICAL_DEGREE]>> {
+    let puzzle = puzzle.as_bytes();
+    let mut links: FxHashMap<Node, SmallVec<[Node; TYPICAL_DEGREE]>> =
+        FxHashMap::with_capacity_and_hasher(520, FxBuildHasher);
+    let mut cursor = 0;
+    while cursor < puzzle.len() {
+        let a = [
+            *puzzle.get_unchecked(cursor + 0),
+            *puzzle.get_unchecked(cursor + 1),
+        ];
+        let b = [
+            *puzzle.get_unchecked(cursor + 3),
+            *puzzle.get_unchecked(cursor + 4),
+        ];
         links.entry(a).or_default().push(b);
         links.entry(b).or_default().push(a);
+        cursor += 6;
     }
+    links
+}
+
+#[aoc(day23, part1)]
+pub fn part1(puzzle: &str) -> u64 {
+    let links = unsafe { parse(puzzle) };
     let mut count = 0;
     for (node, neighbors) in links.iter() {
         if node[0] == b't' {
@@ -49,14 +62,7 @@ pub fn part1(puzzle: &str) -> u64 {
 
 #[aoc(day23, part2)]
 pub fn part2(puzzle: &str) -> String {
-    let mut links: HashMap<Node, SmallVec<[Node; TYPICAL_DEGREE]>, _> = FxHashMap::default();
-    for line in puzzle.lines() {
-        let line = line.as_bytes();
-        let a = [line[0], line[1]];
-        let b = [line[3], line[4]];
-        links.entry(a).or_default().push(b);
-        links.entry(b).or_default().push(a);
-    }
+    let mut links = unsafe { parse(puzzle) };
     for neigh in links.values_mut() {
         neigh.sort_unstable();
     }
@@ -67,23 +73,24 @@ pub fn part2(puzzle: &str) -> String {
         .collect_vec();
 
     let mut largest_clique = smallvec![*nodes_sorted[0].0, nodes_sorted[0].1[0]];
+    let mut current_node_clique: SmallVec<[Node; TYPICAL_DEGREE]> = smallvec![*nodes_sorted[0].0];
     for (node, neighbors) in nodes_sorted {
-        // eprintln!("{node} {neighbors:?} ? {}", largest_clique.len());
         if neighbors.len() < largest_clique.len() {
             continue;
         }
+        current_node_clique[0] = *node;
+        debug_assert_eq!(current_node_clique.len(), 1);
         if let Some(clique) = find_clique_larger_than(
-            &mut smallvec![*node],
+            &mut current_node_clique,
             neighbors.as_slice(),
             &links,
             largest_clique.len() + 1,
         ) {
-            // eprintln!("Better: {clique:?} {}", clique.len());
             largest_clique = clique;
         }
     }
 
-    largest_clique.sort();
+    largest_clique.sort_unstable();
     let largest_clique = largest_clique
         .iter()
         .flat_map(|x| [b',', x[0], x[1]])
@@ -102,17 +109,17 @@ fn find_clique_larger_than<'a, 'i>(
     }
     let mut best_clique: Option<SmallVec<[Node<'i>; TYPICAL_DEGREE]>> = None;
     for (i, node) in additional_node_pool.iter().enumerate() {
-        let neighbors = links.get(node).unwrap();
+        let neighbors = unsafe { links.get(node).unwrap_unchecked() };
         if neighbors.len() < min_size {
             continue;
         }
-        if !sorted_is_subset(&current_clique[1..], neighbors) {
+        if !sorted_is_subset(unsafe { current_clique.split_at_unchecked(1).1 }, neighbors) {
             continue;
         }
         current_clique.push(*node);
         let better_clique = find_clique_larger_than(
             current_clique,
-            &additional_node_pool[i + 1..],
+            unsafe { additional_node_pool.split_at_unchecked(i + 1).1 },
             links,
             min_size,
         );
@@ -124,13 +131,9 @@ fn find_clique_larger_than<'a, 'i>(
         }
         current_clique.pop();
     }
-    if best_clique
-        .as_ref()
-        .map(|x| x.len() >= min_size)
-        .unwrap_or(false)
-    {
+    if best_clique.as_ref().is_some_and(|x| x.len() >= min_size) {
         best_clique
-    } else if current_clique.as_ref().len() >= min_size {
+    } else if current_clique.len() >= min_size {
         Some(current_clique.clone())
     } else {
         None
@@ -140,13 +143,13 @@ fn find_clique_larger_than<'a, 'i>(
 fn sorted_is_subset(sub: &[Node], sup: &[Node]) -> bool {
     let mut cur_idx = 0;
     for s in sub {
-        while s > &sup[cur_idx] {
+        while cur_idx < sup.len() && s > unsafe { sup.get_unchecked(cur_idx) } {
             cur_idx += 1;
-            if cur_idx == sup.len() {
-                return false;
-            }
         }
-        if s == &sup[cur_idx] {
+        if cur_idx == sup.len() {
+            return false;
+        }
+        if s == unsafe { sup.get_unchecked(cur_idx) } {
             cur_idx += 1;
         } else {
             return false;
