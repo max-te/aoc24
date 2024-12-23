@@ -1,4 +1,4 @@
-use std::{borrow::Cow, collections::HashMap};
+use std::collections::HashMap;
 
 use aoc_runner_derive::aoc;
 use itertools::Itertools;
@@ -56,14 +56,17 @@ pub fn part2(puzzle: &str) -> String {
         links.entry(a).or_default().push(b);
         links.entry(b).or_default().push(a);
     }
+    for neigh in links.values_mut() {
+        neigh.sort_unstable();
+    }
 
-    let nodes_descending_degree = links.iter().sorted_by_key(|x| x.1.len()).collect_vec();
+    let nodes_sorted = links
+        .iter()
+        .sorted_unstable_by_key(|x| x.1.len())
+        .collect_vec();
 
-    let mut largest_clique = smallvec![
-        *nodes_descending_degree[0].0,
-        nodes_descending_degree[0].1[0]
-    ];
-    for (node, neighbors) in nodes_descending_degree {
+    let mut largest_clique = smallvec![*nodes_sorted[0].0, nodes_sorted[0].1[0]];
+    for (node, neighbors) in nodes_sorted {
         // eprintln!("{node} {neighbors:?} ? {}", largest_clique.len());
         if neighbors.len() < largest_clique.len() {
             continue;
@@ -104,10 +107,8 @@ fn find_clique_larger_than<'a, 'i>(
         if neighbors.len() < min_size {
             continue 'pool;
         }
-        for c in current_clique.iter() {
-            if !neighbors.contains(c) {
-                continue 'pool;
-            }
+        if !sorted_is_subset(&current_clique[1..], neighbors) {
+            continue 'pool;
         }
         current_clique.push(*node);
         let better_clique = find_clique_larger_than(
@@ -137,6 +138,24 @@ fn find_clique_larger_than<'a, 'i>(
         // eprintln!("find_clique_larger_than({current_clique:?}, {additional_node_pool:?}, {min_size}) = None");
         None
     }
+}
+
+fn sorted_is_subset(sub: &[Node], sup: &[Node]) -> bool {
+    let mut cur_idx = 0;
+    for s in sub {
+        while s > &sup[cur_idx] {
+            cur_idx += 1;
+            if cur_idx == sup.len() {
+                return false;
+            }
+        }
+        if s == &sup[cur_idx] {
+            cur_idx += 1;
+        } else {
+            return false;
+        }
+    }
+    true
 }
 
 #[cfg(test)]
