@@ -1,23 +1,27 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, collections::HashMap};
 
 use aoc_runner_derive::aoc;
 use itertools::Itertools;
 use rustc_hash::FxHashMap;
 use smallvec::{smallvec, SmallVec};
 
+type Node<'i> = [u8; 2];
+
 #[aoc(day23, part1)]
 pub fn part1(puzzle: &str) -> u64 {
-    let mut links: std::collections::HashMap<_, Vec<_>, _> = FxHashMap::default();
+    let mut links: HashMap<Node, Vec<Node>, _> = FxHashMap::default();
     for line in puzzle.lines() {
-        let (a, b) = line.split_once('-').unwrap();
+        let line = line.as_bytes();
+        let a = [line[0], line[1]];
+        let b = [line[3], line[4]];
         links.entry(a).or_default().push(b);
         links.entry(b).or_default().push(a);
     }
     let mut count = 0;
     for (node, neighbors) in links.iter() {
-        if node.starts_with('t') {
+        if node[0] == b't' {
             for neighbor in neighbors {
-                if neighbor.starts_with('t') && neighbor > node {
+                if neighbor[0] == b't' && neighbor > node {
                     continue;
                 }
 
@@ -26,13 +30,13 @@ pub fn part1(puzzle: &str) -> u64 {
                     if second_neighbor > neighbor {
                         continue;
                     }
-                    if second_neighbor.starts_with('t') && second_neighbor > node {
+                    if second_neighbor[0] == b't' && second_neighbor > node {
                         continue;
                     }
 
                     if neighbors.contains(second_neighbor) {
                         #[cfg(debug_assertions)]
-                        println!("{node}-{neighbor}-{second_neighbor}");
+                        println!("{node:?}-{neighbor:?}-{second_neighbor:?}");
                         count += 1;
                     }
                 }
@@ -44,9 +48,11 @@ pub fn part1(puzzle: &str) -> u64 {
 
 #[aoc(day23, part2)]
 pub fn part2(puzzle: &str) -> String {
-    let mut links: std::collections::HashMap<_, Vec<_>, _> = FxHashMap::default();
+    let mut links: HashMap<Node, Vec<Node>, _> = FxHashMap::default();
     for line in puzzle.lines() {
-        let (a, b) = line.split_once('-').unwrap();
+        let line = line.as_bytes();
+        let a = [line[0], line[1]];
+        let b = [line[3], line[4]];
         links.entry(a).or_default().push(b);
         links.entry(b).or_default().push(a);
     }
@@ -71,10 +77,12 @@ pub fn part2(puzzle: &str) -> String {
     }
 
     largest_clique.sort();
-    largest_clique.iter().join(",")
+    let largest_clique = largest_clique
+        .iter()
+        .flat_map(|x| [b',', x[0], x[1]])
+        .collect_vec();
+    String::from_utf8_lossy(&largest_clique[1..]).to_string()
 }
-
-type Node<'i> = &'i str;
 
 fn find_clique_larger_than<'a, 'i>(
     current_clique: &'a SmallVec<[Node<'i>; 10]>,
@@ -99,7 +107,7 @@ fn find_clique_larger_than<'a, 'i>(
             }
         }
         let mut new_clique = current_clique.clone();
-        new_clique.push(node);
+        new_clique.push(*node);
         let better_clique =
             find_clique_larger_than(&new_clique, &additional_node_pool[i + 1..], links, min_size);
         if let Some(better_clique) = better_clique {
