@@ -206,7 +206,7 @@ fn two_hashmap_rayon(puzzle: &str) -> u32 {
 }
 
 pub fn part2(puzzle: &str) -> u16 {
-    two_array_rayon(puzzle)
+    two_array(puzzle)
 }
 
 #[cfg(test)]
