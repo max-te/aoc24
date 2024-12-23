@@ -59,7 +59,10 @@ pub fn part2(puzzle: &str) -> String {
 
     let nodes_descending_degree = links.iter().sorted_by_key(|x| x.1.len()).collect_vec();
 
-    let mut largest_clique = SmallVec::new();
+    let mut largest_clique = smallvec![
+        *nodes_descending_degree[0].0,
+        nodes_descending_degree[0].1[0]
+    ];
     for (node, neighbors) in nodes_descending_degree {
         // eprintln!("{node} {neighbors:?} ? {}", largest_clique.len());
         if neighbors.len() < largest_clique.len() {
