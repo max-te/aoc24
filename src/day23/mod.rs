@@ -69,7 +69,7 @@ pub fn part2(puzzle: &str) -> String {
             continue;
         }
         if let Some(clique) = find_clique_larger_than(
-            &smallvec![*node],
+            &mut smallvec![*node],
             neighbors.as_slice(),
             &links,
             largest_clique.len() + 1,
@@ -88,7 +88,7 @@ pub fn part2(puzzle: &str) -> String {
 }
 
 fn find_clique_larger_than<'a, 'i>(
-    current_clique: &'a SmallVec<[Node<'i>; 10]>,
+    current_clique: &'a mut SmallVec<[Node<'i>; 10]>,
     additional_node_pool: &'a [Node<'i>],
     links: &'a FxHashMap<Node, SmallVec<[Node<'i>; 10]>>,
     min_size: usize,
@@ -98,33 +98,41 @@ fn find_clique_larger_than<'a, 'i>(
         // eprintln!("find_clique_larger_than({current_clique:?}, {additional_node_pool:?}, {min_size}) = None (fast)");
         return None;
     }
-    let mut best_clique = Cow::Borrowed(current_clique);
+    let mut best_clique: Option<SmallVec<[Node<'i>; 10]>> = None;
     'pool: for (i, node) in additional_node_pool.iter().enumerate() {
         let neighbors = links.get(node).unwrap();
         if neighbors.len() < min_size {
             continue 'pool;
         }
-        for c in current_clique {
+        for c in current_clique.iter() {
             if !neighbors.contains(c) {
                 continue 'pool;
             }
         }
-        let mut new_clique = current_clique.clone();
-        new_clique.push(*node);
-        let better_clique =
-            find_clique_larger_than(&new_clique, &additional_node_pool[i + 1..], links, min_size);
+        current_clique.push(*node);
+        let better_clique = find_clique_larger_than(
+            current_clique,
+            &additional_node_pool[i + 1..],
+            links,
+            min_size,
+        );
+
         if let Some(better_clique) = better_clique {
-            if better_clique.len() > best_clique.len() {
-                best_clique = Cow::Owned(better_clique);
+            if best_clique.as_ref().map(|x| x.len()).unwrap_or(0) < better_clique.len() {
+                best_clique = Some(better_clique);
             }
         }
-        if new_clique.len() > best_clique.len() {
-            best_clique = Cow::Owned(new_clique);
-        }
+        current_clique.pop();
     }
-    if best_clique.len() >= min_size {
+    if best_clique
+        .as_ref()
+        .map(|x| x.len() >= min_size)
+        .unwrap_or(false)
+    {
         // eprintln!("find_clique_larger_than({current_clique:?}, {additional_node_pool:?}, {min_size}) = Some({best_clique:?})");
-        Some(best_clique.into_owned())
+        best_clique
+    } else if current_clique.as_ref().len() >= min_size {
+        Some(current_clique.clone())
     } else {
         // eprintln!("find_clique_larger_than({current_clique:?}, {additional_node_pool:?}, {min_size}) = None");
         None
